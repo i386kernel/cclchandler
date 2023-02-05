@@ -1,5 +1,5 @@
 # Managing Custom Certificates for TKG Cluster
-This program will aid you in efficiently managing the lifecycle of custom certificates within a TKG Cluster by adding and deleting them to both the kubeadmcontrolplane and kubeadmconfigtemplate objects
+This program will aid you in efficiently managing the lifecycle of custom certificates within a TKG Cluster by adding and deleting them to both the kubeadmcontrolplane and kubeadmconfigtemplate objects.
 ## Features
 - Add custom CA certificates to a TKG cluster
 - Delete custom CA certificates from a TKG cluster
@@ -9,6 +9,7 @@ This program will aid you in efficiently managing the lifecycle of custom certif
 Before you begin, you will need the following:
 
 - Access to a TKG cluster
+- Make sure you are in Management Cluster Context
 - The binary installed and configured on your machine
 
 ## Usage
