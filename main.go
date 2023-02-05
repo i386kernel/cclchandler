@@ -112,6 +112,7 @@ func appendCerts(cert string) {
 		return
 	}
 	certcontent = string(fileContents)
+	fmt.Println(certcontent)
 
 	for _, kadmcp := range getkubeadmControlPlaneList(kubeclient) {
 		appendKubeAdmCPCert(kubeclient, kadmcp)
