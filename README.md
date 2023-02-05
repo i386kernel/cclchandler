@@ -1,6 +1,5 @@
 # Managing Custom Certificates for TKG Cluster
-In order to securely communicate with a TKG (Tanzu Kubernetes Grid) cluster, it is often necessary to add custom CA certificates. This binary will allow you to manage the life cycle of these certificates, including adding and deleting them from your TKG cluster.
-
+This program will aid you in efficiently managing the lifecycle of custom certificates within a TKG Cluster by adding and deleting them to both the kubeadmcontrolplane and kubeadmconfigtemplate objects
 ## Features
 - Add custom CA certificates to a TKG cluster
 - Delete custom CA certificates from a TKG cluster
