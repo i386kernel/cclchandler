@@ -14,7 +14,7 @@ Before you begin, you will need the following:
 ## Usage
 The binary provides the following commands to manage custom certificates for a TKG cluster:
 
-###Adding Custom Certificates
+### Adding Custom Certificates
 To add a custom certificate, use the following command:
 
 ```
@@ -31,4 +31,4 @@ To delete a custom certificate, use the following command:
 This will remove the specified certificate from the trusted certificate store on the host machine and remove it from the TKG cluster configuration.
 
 ## Conclusion
-With this binary, you can easily manage the life cycle of custom certificates for your TKG cluster. This allows you to securely communicate with your cluster and maintain the security of your infrastructure.
+This binary streamlines the management of custom certificates within your TKG cluster by facilitating interaction with kubeadmcontrolplane, kubeadmconfigtemplates, and machinedeployments objects.
