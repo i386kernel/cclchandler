@@ -82,6 +82,9 @@ func appendCerts(cert string) {
 	}
 	certcontent = string(fileContents)
 
+	for _, kadmcp := range getkubeadmControlPlaneList(kubeclient) {
+		appendKubeAdmCPCert(kubeclient, kadmcp)
+	}
 	for _, kadm := range getkubeadmconfigTemplatesList(kubeclient) {
 		appendKubeAdmCert(kubeclient, kadm)
 	}
@@ -99,8 +102,11 @@ func deleteCerts(cert string) {
 	}
 	certcontent = string(fileContents)
 	fmt.Println(certcontent)
+	for _, kadmcp := range getkubeadmControlPlaneList(kubeclient) {
+		deleteKubeAdmCPCerts(kubeclient, kadmcp)
+	}
 	for _, kadm := range getkubeadmconfigTemplatesList(kubeclient) {
-		deleteKubeAdmCerts(kubeclient, kadm)
+		deleteKubeAdmConfigCerts(kubeclient, kadm)
 	}
 	for _, md := range getMachineDeployments(kubeclient) {
 		fmt.Println("Applying MD", md)
@@ -217,7 +223,56 @@ func appendKubeAdmCPCert(client *http.Client, kadmcp string) {
 	}
 
 	KubeadmControlPlane.Spec.KubeadmConfigSpec.Files = append(KubeadmControlPlane.Spec.KubeadmConfigSpec.Files, newFile)
-	KubeadmConfigTemplate.Spec.Template.Spec.PreKubeadmCommands = []string{"'! which rehash_ca_certificates.sh 2>/dev/null || rehash_ca_certificates.sh'", "'! which update-ca-certificates 2>/dev/null || (mv /etc/ssl/certs/tkg-custom-ca.pem /usr/local/share/ca-certificates/tkg-custom-ca.crt && update-ca-certificates)'"}
+	KubeadmControlPlane.Spec.KubeadmConfigSpec.PreKubeadmCommands = []string{"'! which rehash_ca_certificates.sh 2>/dev/null || rehash_ca_certificates.sh'", "'! which update-ca-certificates 2>/dev/null || (mv /etc/ssl/certs/tkg-custom-ca.pem /usr/local/share/ca-certificates/tkg-custom-ca.crt && update-ca-certificates)'"}
+	data, err := json.Marshal(KubeadmConfigTemplate)
+
+	request, err := http.NewRequest("PATCH", kubeapiserver+url, bytes.NewBuffer(data))
+	if err != nil {
+		fmt.Println(err)
+	}
+	request.Header = map[string][]string{"Content-type": {" application/merge-patch+json"}}
+	resp, err := client.Do(request)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer resp.Body.Close()
+	bodyr, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(string(bodyr))
+}
+
+func deleteKubeAdmCPCerts(client *http.Client, kadmcp string) {
+	url := KUBEADMCONTROLPLANE + kadmcp
+	req, err := client.Get(kubeapiserver + url)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(req.Body)
+	if req.StatusCode != http.StatusOK {
+		fmt.Fprintln(os.Stderr, "Unexpected status code:", req.StatusCode)
+		os.Exit(1)
+	}
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading response body:", err)
+		os.Exit(1)
+	}
+
+	if err := json.Unmarshal(body, &KubeadmConfigTemplate); err != nil {
+		fmt.Fprintln(os.Stderr, "Error unmarshaling response:", err)
+		os.Exit(1)
+	}
+
+	KubeadmControlPlane.Spec.KubeadmConfigSpec.Files = KubeadmControlPlane.Spec.KubeadmConfigSpec.Files[:0]
+	KubeadmConfigTemplate.Spec.Template.Spec.Files = KubeadmConfigTemplate.Spec.Template.Spec.Files[:0]
+	KubeadmControlPlane.Spec.KubeadmConfigSpec.PreKubeadmCommands = []string{"'! which rehash_ca_certificates.sh 2>/dev/null || rehash_ca_certificates.sh'", "'! which update-ca-certificates 2>/dev/null || (mv /etc/ssl/certs/tkg-custom-ca.pem /usr/local/share/ca-certificates/tkg-custom-ca.crt && update-ca-certificates)'"}
 	data, err := json.Marshal(KubeadmConfigTemplate)
 
 	request, err := http.NewRequest("PATCH", kubeapiserver+url, bytes.NewBuffer(data))
@@ -238,7 +293,7 @@ func appendKubeAdmCPCert(client *http.Client, kadmcp string) {
 }
 
 func getkubeadmconfigTemplatesList(client *http.Client) []string {
-	resp, err := client.Get(kubeapiserver + "/apis/bootstrap.cluster.x-k8s.io/v1beta1/namespaces/default/kubeadmconfigtemplates")
+	resp, err := client.Get(kubeapiserver + KUBEADMCONFIGTEMPLATE)
 	if err != nil {
 		log.Fatal("unable to retrieve with the given object", err)
 	}
@@ -278,7 +333,7 @@ func getkubeadmconfigTemplatesList(client *http.Client) []string {
 
 // appendKubeAdmCert updates kubeadm object
 func appendKubeAdmCert(client *http.Client, kadmdep string) {
-	url := "/apis/bootstrap.cluster.x-k8s.io/v1beta1/namespaces/default/kubeadmconfigtemplates/" + kadmdep
+	url := KUBEADMCONFIGTEMPLATE + kadmdep
 	req, err := client.Get(kubeapiserver + url)
 	if err != nil {
 		log.Fatal(err)
@@ -337,8 +392,8 @@ func appendKubeAdmCert(client *http.Client, kadmdep string) {
 }
 
 // deleteKubeAdmCerts deletes the existing certificates from kubeadmobjects
-func deleteKubeAdmCerts(client *http.Client, kadmdep string) {
-	url := "/apis/bootstrap.cluster.x-k8s.io/v1beta1/namespaces/default/kubeadmconfigtemplates/" + kadmdep
+func deleteKubeAdmConfigCerts(client *http.Client, kadmdep string) {
+	url := KUBEADMCONFIGTEMPLATE + kadmdep
 	req, err := client.Get(kubeapiserver + url)
 	if err != nil {
 		log.Fatal(err)
@@ -386,7 +441,7 @@ func deleteKubeAdmCerts(client *http.Client, kadmdep string) {
 }
 
 func getMachineDeployments(client *http.Client) []string {
-	url := kubeapiserver + "/apis/cluster.x-k8s.io/v1beta1/namespaces/default/machinedeployments/"
+	url := kubeapiserver + MACHINEDEPLOYMENT
 	resp, err := client.Get(url)
 	if err != nil {
 		log.Fatal("unable to retrieve with the given object", err)
@@ -430,7 +485,7 @@ func getMachineDeployments(client *http.Client) []string {
 
 func mergeMachineDeployments(client *http.Client, mcdep string) {
 
-	url := "/apis/cluster.x-k8s.io/v1beta1/namespaces/default/machinedeployments/" + mcdep
+	url := MACHINEDEPLOYMENT + mcdep
 	req, err := client.Get(kubeapiserver + url)
 	if err != nil {
 		log.Fatal(err)
