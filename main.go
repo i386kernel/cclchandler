@@ -86,12 +86,12 @@ func appendCerts(cert string) {
 
 func deleteCerts(cert string) {
 	fileContents, err := os.ReadFile(cert)
-	fmt.Println(cert)
+	certcontent = string(fileContents)
+	fmt.Println(certcontent)
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 		return
 	}
-	certcontent = string(fileContents)
 	for _, kadm := range getkubeadmconfigTemplatesList(kubeclient) {
 		deleteKubeAdmCerts(kubeclient, kadm)
 	}
