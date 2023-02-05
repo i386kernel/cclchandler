@@ -62,7 +62,8 @@ func main() {
 	}
 	err := app.Run(os.Args)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("\n")
+		fmt.Println("ERROR: ", err)
 		return
 	}
 }
@@ -86,12 +87,12 @@ func appendCerts(cert string) {
 
 func deleteCerts(cert string) {
 	fileContents, err := os.ReadFile(cert)
-	certcontent = string(fileContents)
-	fmt.Println(certcontent)
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 		return
 	}
+	certcontent = string(fileContents)
+	fmt.Println(certcontent)
 	for _, kadm := range getkubeadmconfigTemplatesList(kubeclient) {
 		deleteKubeAdmCerts(kubeclient, kadm)
 	}
