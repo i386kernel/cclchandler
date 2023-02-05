@@ -18,6 +18,12 @@ import (
 	"time"
 )
 
+const (
+	KUBEADMCONTROLPLANE   = "/apis/controlplane.cluster.x-k8s.io/v1beta1/namespaces/default/kubeadmcontrolplanes/"
+	KUBEADMCONFIGTEMPLATE = "/apis/bootstrap.cluster.x-k8s.io/v1beta1/namespaces/default/kubeadmconfigtemplates/"
+	MACHINEDEPLOYMENT     = "/apis/cluster.x-k8s.io/v1beta1/namespaces/default/machinedeployments/"
+)
+
 var kubeapiserver string
 var kubeclient *http.Client
 var certcontent string
@@ -131,6 +137,104 @@ func getkubeclient(config *rest.Config) {
 		},
 	}
 	kubeclient = &http.Client{Transport: transport}
+}
+
+func getkubeadmControlPlaneList(client *http.Client) []string {
+	resp, err := client.Get(kubeapiserver + KUBEADMCONTROLPLANE)
+	if err != nil {
+		log.Fatal("unable to retrieve with the given object", err)
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		fmt.Fprintln(os.Stderr, "Unexpected status code:", resp.StatusCode)
+		os.Exit(1)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading response body:", err)
+		os.Exit(1)
+	}
+	var kadmList struct {
+		Items []struct {
+			Metadata struct {
+				Name string `json:"name"`
+			} `json:"metadata"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(body, &kadmList); err != nil {
+		fmt.Fprintln(os.Stderr, "Error unmarshaling response:", err)
+		os.Exit(1)
+	}
+	var kubeadmcplist []string
+	for _, kadm := range kadmList.Items {
+		fmt.Println(kadm.Metadata.Name)
+		kubeadmcplist = append(kubeadmcplist, kadm.Metadata.Name)
+	}
+	return kubeadmcplist
+}
+
+func appendKubeAdmCPCert(client *http.Client, kadmcp string) {
+	url := KUBEADMCONTROLPLANE + kadmcp
+	req, err := client.Get(kubeapiserver + url)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(req.Body)
+	if req.StatusCode != http.StatusOK {
+		fmt.Fprintln(os.Stderr, "Unexpected status code:", req.StatusCode)
+		os.Exit(1)
+	}
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading response body:", err)
+		os.Exit(1)
+	}
+
+	if err := json.Unmarshal(body, &KubeadmControlPlane); err != nil {
+		fmt.Fprintln(os.Stderr, "Error unmarshaling response:", err)
+		os.Exit(1)
+	}
+	newFile := struct {
+		Content     string `json:"content"`
+		Owner       string `json:"owner"`
+		Path        string `json:"path"`
+		Permissions string `json:"permissions"`
+	}{
+		Content:     certcontent,
+		Owner:       "root",
+		Path:        "/etc/ssl/certs/tkg-custom-ca.pem",
+		Permissions: "0644",
+	}
+
+	KubeadmControlPlane.Spec.KubeadmConfigSpec.Files = append(KubeadmControlPlane.Spec.KubeadmConfigSpec.Files, newFile)
+	KubeadmConfigTemplate.Spec.Template.Spec.PreKubeadmCommands = []string{"'! which rehash_ca_certificates.sh 2>/dev/null || rehash_ca_certificates.sh'", "'! which update-ca-certificates 2>/dev/null || (mv /etc/ssl/certs/tkg-custom-ca.pem /usr/local/share/ca-certificates/tkg-custom-ca.crt && update-ca-certificates)'"}
+	data, err := json.Marshal(KubeadmConfigTemplate)
+
+	request, err := http.NewRequest("PATCH", kubeapiserver+url, bytes.NewBuffer(data))
+	if err != nil {
+		fmt.Println(err)
+	}
+	request.Header = map[string][]string{"Content-type": {" application/merge-patch+json"}}
+	resp, err := client.Do(request)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer resp.Body.Close()
+	bodyr, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(string(bodyr))
 }
 
 func getkubeadmconfigTemplatesList(client *http.Client) []string {
