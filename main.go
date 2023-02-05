@@ -74,6 +74,37 @@ func main() {
 	}
 }
 
+// loadconfig
+func loadconfig() *rest.Config {
+	kubeconfigPath := filepath.Join(homedir.HomeDir(), ".kube", "config")
+	fmt.Println("Accessing kubeconfig from:", "'"+kubeconfigPath+"'")
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error loading kubeconfig:", err)
+		os.Exit(1)
+	}
+	kubeapiserver = config.Host
+	fmt.Println("Here's the Current Host Details \n", kubeapiserver)
+	return config
+}
+
+// getkubeclient creates a http client for kubernetes cluster in the current context
+func getkubeclient(config *rest.Config) {
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(config.CAData)
+	clientCert, err := tls.X509KeyPair(config.CertData, config.KeyData)
+	if err != nil {
+		log.Fatal(err)
+	}
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			RootCAs:      caCertPool,
+			Certificates: []tls.Certificate{clientCert},
+		},
+	}
+	kubeclient = &http.Client{Transport: transport}
+}
+
 func appendCerts(cert string) {
 	fileContents, err := os.ReadFile(cert)
 	if err != nil {
@@ -114,37 +145,7 @@ func deleteCerts(cert string) {
 	}
 }
 
-// loadconfig
-func loadconfig() *rest.Config {
-	kubeconfigPath := filepath.Join(homedir.HomeDir(), ".kube", "config")
-	fmt.Println("Accessing kubeconfig from:", "'"+kubeconfigPath+"'")
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error loading kubeconfig:", err)
-		os.Exit(1)
-	}
-	kubeapiserver = config.Host
-	fmt.Println("Here's the Current Host Details \n", kubeapiserver)
-	return config
-}
-
-// getkubeclient creates a http client for kubernetes cluster in the current context
-func getkubeclient(config *rest.Config) {
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(config.CAData)
-	clientCert, err := tls.X509KeyPair(config.CertData, config.KeyData)
-	if err != nil {
-		log.Fatal(err)
-	}
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			RootCAs:      caCertPool,
-			Certificates: []tls.Certificate{clientCert},
-		},
-	}
-	kubeclient = &http.Client{Transport: transport}
-}
-
+// getkubeadmControlPlaneList returns all kubeadmcontrolplane object names
 func getkubeadmControlPlaneList(client *http.Client) []string {
 	resp, err := client.Get(kubeapiserver + KUBEADMCONTROLPLANE)
 	if err != nil {
@@ -184,6 +185,7 @@ func getkubeadmControlPlaneList(client *http.Client) []string {
 	return kubeadmcplist
 }
 
+// appendKubeAdmCPCert appends the provided certificate to kubeadmcontrolplane object
 func appendKubeAdmCPCert(client *http.Client, kadmcp string) {
 	url := KUBEADMCONTROLPLANE + kadmcp
 	req, err := client.Get(kubeapiserver + url)
@@ -243,6 +245,7 @@ func appendKubeAdmCPCert(client *http.Client, kadmcp string) {
 	fmt.Println(string(bodyr))
 }
 
+// deleteKubeAdmCPCerts deletes all the certificates in kubeadmcontrolplane object
 func deleteKubeAdmCPCerts(client *http.Client, kadmcp string) {
 	url := KUBEADMCONTROLPLANE + kadmcp
 	req, err := client.Get(kubeapiserver + url)
@@ -292,6 +295,7 @@ func deleteKubeAdmCPCerts(client *http.Client, kadmcp string) {
 	fmt.Println(string(bodyr))
 }
 
+// getkubeadmconfigTemplatesList returns all kubeadmconfigtemplatelist object names
 func getkubeadmconfigTemplatesList(client *http.Client) []string {
 	resp, err := client.Get(kubeapiserver + KUBEADMCONFIGTEMPLATE)
 	if err != nil {
@@ -440,6 +444,7 @@ func deleteKubeAdmConfigCerts(client *http.Client, kadmdep string) {
 	fmt.Println(string(bodyr))
 }
 
+// getMachineDeployments returns all the machinedpeloyments names
 func getMachineDeployments(client *http.Client) []string {
 	url := kubeapiserver + MACHINEDEPLOYMENT
 	resp, err := client.Get(url)
@@ -483,6 +488,7 @@ func getMachineDeployments(client *http.Client) []string {
 	return mdep
 }
 
+// mergeMachineDeployments merges the newly created annotation with the current date and time
 func mergeMachineDeployments(client *http.Client, mcdep string) {
 
 	url := MACHINEDEPLOYMENT + mcdep
