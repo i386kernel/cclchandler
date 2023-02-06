@@ -1,0 +1,2439 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: ClusterClass
+metadata:
+  name: tkg-vsphere-cc-02
+  namespace: default
+spec:
+  controlPlane:
+    machineHealthCheck:
+      nodeStartupTimeout: 20m0s
+      unhealthyConditions:
+        - status: Unknown
+          timeout: 5m0s
+          type: Ready
+        - status: 'False'
+          timeout: 12m0s
+          type: Ready
+    machineInfrastructure:
+      ref:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: VSphereMachineTemplate
+        name: tkg-vsphere-default-v1.0.0-control-plane
+        namespace: default
+    metadata: {}
+    ref:
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      kind: KubeadmControlPlaneTemplate
+      name: tkg-vsphere-default-v1.0.0-kcp
+      namespace: default
+  infrastructure:
+    ref:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+      kind: VSphereClusterTemplate
+      name: tkg-vsphere-default-v1.0.0-cluster
+      namespace: default
+  patches:
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/extraVolumes
+              value: []
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      name: KCP_INIT_APISERVER_EMPTY_EXTRAVOLUMES_ARRAY
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/etcd/local/extraArgs
+              valueFrom:
+                template: |
+                  {{ $containCipherSuites := false }}
+                  {{- range $key, $val := .etcdExtraArgs }}
+                  {{- if eq $key "cipher-suites" }}
+                    {{- $containCipherSuites = true }}
+                  {{- end }}
+                  {{ $key -}} : "{{ $val }}"
+                  {{- end }}
+                  {{- if not $containCipherSuites }}
+                  cipher-suites: "{{ .tlsCipherSuites }}"
+                  {{- end }}
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      name: etcdExtraArgs
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/extraArgs
+              valueFrom:
+                template: |
+                  {{ $containCipherSuites := false }}
+                  {{ $containCloudProvider := false }}
+                  {{- range $key, $val := .apiServerExtraArgs }}
+                  {{- if eq $key "tls-cipher-suites" }}
+                    {{- $containCipherSuites = true }}
+                  {{- end }}
+                  {{- if eq $key "cloud-provider" }}
+                    {{- $containCloudProvider = true }}
+                  {{- end }}
+                  {{ $key -}} : "{{ $val }}"
+                  {{- end }}
+                  {{- if not $containCipherSuites }}
+                  tls-cipher-suites: "{{ .tlsCipherSuites }}"
+                  {{- end }}
+                  {{- if not $containCloudProvider }}
+                  cloud-provider: external
+                  {{- end }}
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      name: apiServerExtraArgs
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/scheduler/extraArgs
+              valueFrom:
+                template: |
+                  {{ $containCipherSuites := false }}
+                  {{- range $key, $val := .kubeSchedulerExtraArgs }}
+                  {{- if eq $key "tls-cipher-suites" }}
+                    {{- $containCipherSuites = true }}
+                  {{- end }}
+                  {{ $key -}} : "{{ $val }}"
+                  {{- end }}
+                  {{- if not $containCipherSuites }}
+                  tls-cipher-suites: "{{ .tlsCipherSuites }}"
+                  {{- end }}
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      name: kubeSchedulerExtraArgs
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/controllerManager/extraArgs
+              valueFrom:
+                template: |
+                  {{ $containCipherSuites := false }}
+                  {{ $containCloudProvider := false }}
+                  {{- range $key, $val := .kubeControllerManagerExtraArgs }}
+                  {{- if eq $key "tls-cipher-suites" }}
+                    {{- $containCipherSuites = true }}
+                  {{- end }}
+                  {{- if eq $key "cloud-provider" }}
+                    {{- $containCloudProvider = true }}
+                  {{- end }}
+                  {{ $key -}} : "{{ $val }}"
+                  {{- end }}
+                  {{- if not $containCipherSuites }}
+                  tls-cipher-suites: "{{ .tlsCipherSuites }}"
+                  {{- end }}
+                  {{- if not $containCloudProvider }}
+                  cloud-provider: external
+                  {{- end }}
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      name: kubeControllerManagerExtraArgs
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/initConfiguration/nodeRegistration/kubeletExtraArgs
+              valueFrom:
+                template: |
+                  {{ $containCipherSuites := false }}
+                  {{ $containCloudProvider := false }}
+                  {{- range $key, $val := .controlPlaneKubeletExtraArgs }}
+                  {{- if eq $key "tls-cipher-suites" }}
+                    {{- $containCipherSuites = true }}
+                  {{- end }}
+                  {{- if eq $key "cloud-provider" }}
+                    {{- $containCloudProvider = true }}
+                  {{- end }}
+                  {{ $key -}} : "{{ $val }}"
+                  {{- end }}
+                  {{- if not $containCipherSuites }}
+                  tls-cipher-suites: "{{ .tlsCipherSuites }}"
+                  {{- end }}
+                  {{- if not $containCloudProvider }}
+                  cloud-provider: external
+                  {{- end }}
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/joinConfiguration/nodeRegistration/kubeletExtraArgs
+              valueFrom:
+                template: |
+                  {{ $containCipherSuites := false }}
+                  {{ $containCloudProvider := false }}
+                  {{- range $key, $val := .controlPlaneKubeletExtraArgs }}
+                  {{- if eq $key "tls-cipher-suites" }}
+                    {{- $containCipherSuites = true }}
+                  {{- end }}
+                  {{- if eq $key "cloud-provider" }}
+                    {{- $containCloudProvider = true }}
+                  {{- end }}
+                  {{ $key -}} : "{{ $val }}"
+                  {{- end }}
+                  {{- if not $containCipherSuites }}
+                  tls-cipher-suites: "{{ .tlsCipherSuites }}"
+                  {{- end }}
+                  {{- if not $containCloudProvider }}
+                  cloud-provider: external
+                  {{- end }}
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      name: controlPlaneKubeletExtraArgs
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/joinConfiguration/nodeRegistration/kubeletExtraArgs
+              valueFrom:
+                template: |
+                  {{ $containCipherSuites := false }}
+                  {{ $containCloudProvider := false }}
+                  {{- range $key, $val := .workerKubeletExtraArgs }}
+                  {{- if eq $key "tls-cipher-suites" }}
+                    {{- $containCipherSuites = true }}
+                  {{- end }}
+                  {{- if eq $key "cloud-provider" }}
+                    {{- $containCloudProvider = true }}
+                  {{- end }}
+                  {{ $key -}} : "{{ $val }}"
+                  {{- end }}
+                  {{- if not $containCipherSuites }}
+                  tls-cipher-suites: "{{ .tlsCipherSuites }}"
+                  {{- end }}
+                  {{- if not $containCloudProvider }}
+                  cloud-provider: external
+                  {{- end }}
+          selector:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - tkg-worker
+                  - tkg-worker-windows
+      name: workerKubeletExtraArgs
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/controlPlaneEndpoint
+              valueFrom:
+                template: |
+                  host: '{{ .apiServerEndpoint }}'
+                  port: 6443
+            - op: replace
+              path: /spec/template/spec/thumbprint
+              valueFrom:
+                variable: vcenter.tlsThumbprint
+            - op: replace
+              path: /spec/template/spec/server
+              valueFrom:
+                variable: vcenter.server
+          selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+            kind: VSphereClusterTemplate
+            matchResources:
+              infrastructureCluster: true
+      name: vsphereClusterTemplate
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/identityRef
+              valueFrom:
+                template: |
+                  {{ if .identityRef -}}
+                  kind: {{ .identityRef.kind }}
+                  name: {{ .identityRef.name }}
+                  {{- else -}}
+                  kind: Secret
+                  name: '{{ .builtin.cluster.name }}'
+                  {{- end }}
+          selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+            kind: VSphereClusterTemplate
+            matchResources:
+              infrastructureCluster: true
+      name: vSphereClusterIdentityRef
+    - definitions:
+        - jsonPatches:
+            - op: replace
+              path: /spec/template/spec/numCPUs
+              valueFrom:
+                variable: controlPlane.machine.numCPUs
+            - op: replace
+              path: /spec/template/spec/diskGiB
+              valueFrom:
+                variable: controlPlane.machine.diskGiB
+            - op: replace
+              path: /spec/template/spec/memoryMiB
+              valueFrom:
+                variable: controlPlane.machine.memoryMiB
+            - op: replace
+              path: /spec/template/spec/cloneMode
+              valueFrom:
+                variable: vcenter.cloneMode
+            - op: replace
+              path: /spec/template/spec/network
+              valueFrom:
+                variable: vcenter.network
+            - op: replace
+              path: /spec/template/spec/datacenter
+              valueFrom:
+                variable: vcenter.datacenter
+            - op: replace
+              path: /spec/template/spec/datastore
+              valueFrom:
+                variable: vcenter.datastore
+            - op: replace
+              path: /spec/template/spec/folder
+              valueFrom:
+                variable: vcenter.folder
+            - op: replace
+              path: /spec/template/spec/resourcePool
+              valueFrom:
+                variable: vcenter.resourcePool
+            - op: replace
+              path: /spec/template/spec/storagePolicyName
+              valueFrom:
+                variable: vcenter.storagePolicyID
+            - op: replace
+              path: /spec/template/spec/server
+              valueFrom:
+                variable: vcenter.server
+            - op: replace
+              path: /spec/template/spec/template
+              valueFrom:
+                template: >-
+                  {{ (index .TKR_DATA
+                  .builtin.controlPlane.version).osImageRef.template }}
+          selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+            kind: VSphereMachineTemplate
+            matchResources:
+              controlPlane: true
+      name: controlPlaneMachineTemplate
+    - definitions:
+        - jsonPatches:
+            - op: replace
+              path: /spec/template/spec/numCPUs
+              valueFrom:
+                variable: worker.machine.numCPUs
+            - op: replace
+              path: /spec/template/spec/diskGiB
+              valueFrom:
+                variable: worker.machine.diskGiB
+            - op: replace
+              path: /spec/template/spec/memoryMiB
+              valueFrom:
+                variable: worker.machine.memoryMiB
+            - op: replace
+              path: /spec/template/spec/cloneMode
+              valueFrom:
+                variable: vcenter.cloneMode
+            - op: replace
+              path: /spec/template/spec/network
+              valueFrom:
+                variable: vcenter.network
+            - op: replace
+              path: /spec/template/spec/datacenter
+              valueFrom:
+                variable: vcenter.datacenter
+            - op: replace
+              path: /spec/template/spec/datastore
+              valueFrom:
+                variable: vcenter.datastore
+            - op: replace
+              path: /spec/template/spec/folder
+              valueFrom:
+                variable: vcenter.folder
+            - op: replace
+              path: /spec/template/spec/resourcePool
+              valueFrom:
+                variable: vcenter.resourcePool
+            - op: replace
+              path: /spec/template/spec/storagePolicyName
+              valueFrom:
+                variable: vcenter.storagePolicyID
+            - op: replace
+              path: /spec/template/spec/server
+              valueFrom:
+                variable: vcenter.server
+            - op: replace
+              path: /spec/template/spec/template
+              valueFrom:
+                template: >-
+                  {{ (index .TKR_DATA
+                  .builtin.machineDeployment.version).osImageRef.template }}
+          selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+            kind: VSphereMachineTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - tkg-worker
+                  - tkg-worker-windows
+      name: workerMachineTemplate
+    - definitions:
+        - jsonPatches:
+            - op: replace
+              path: /spec/template/spec/kubeadmConfigSpec/users
+              valueFrom:
+                template: |
+                  - name: capv
+                    sshAuthorizedKeys:
+                    {{- range .user.sshAuthorizedKeys }}
+                    - ' {{- . -}} '
+                    {{- end }}
+                    sudo: ALL=(ALL) NOPASSWD:ALL
+            - op: replace
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/imageRepository
+              valueFrom:
+                template: >-
+                  {{(index .TKR_DATA
+                  .builtin.controlPlane.version).kubernetesSpec.imageRepository}}
+            - op: replace
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/etcd/local/imageRepository
+              valueFrom:
+                template: >-
+                  {{(index .TKR_DATA
+                  .builtin.controlPlane.version).kubernetesSpec.imageRepository}}
+            - op: replace
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/etcd/local/imageTag
+              valueFrom:
+                template: >-
+                  {{(index .TKR_DATA
+                  .builtin.controlPlane.version).kubernetesSpec.etcd.imageTag}}
+            - op: replace
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/dns/imageRepository
+              valueFrom:
+                template: >-
+                  {{(index .TKR_DATA
+                  .builtin.controlPlane.version).kubernetesSpec.imageRepository}}
+            - op: replace
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/dns/imageTag
+              valueFrom:
+                template: >-
+                  {{(index .TKR_DATA
+                  .builtin.controlPlane.version).kubernetesSpec.coredns.imageTag}}
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      name: kubeadmControlPlaneTemplate
+    - definitions:
+        - jsonPatches:
+            - op: replace
+              path: /spec/template/spec/users
+              valueFrom:
+                template: |
+                  - name: capv
+                    sshAuthorizedKeys:
+                    {{- range .user.sshAuthorizedKeys }}
+                    - ' {{- . -}} '
+                    {{- end }}
+                    sudo: ALL=(ALL) NOPASSWD:ALL
+          selector:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - tkg-worker
+      name: KubeadmConfigTemplate
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/files/-
+              valueFrom:
+                template: |
+                  owner: root:root
+                  path: /etc/kubernetes/manifests/kube-vip.yaml
+                  content: |
+                    ---
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      creationTimestamp: null
+                      name: kube-vip
+                      namespace: kube-system
+                    spec:
+                      containers:
+                      - args:
+                        - manager
+                        env:
+                        - name: cp_enable
+                          value: "true"
+                        - name: svc_enable
+                          value: "{{ .kubeVipLoadBalancerProvider }}"
+                        - name: vip_arp
+                          value: "true"
+                        - name: vip_leaderelection
+                          value: "true"
+                        - name: address
+                          value: {{ .apiServerEndpoint }}
+                        {{- if and (not .aviControlPlaneHAProvider) .apiServerPort }}
+                        - name: port
+                          value: "{{ .apiServerPort }}"
+                        {{- end }}
+                        - name: vip_interface
+                          value: {{ .vipNetworkInterface }}
+                        - name: vip_leaseduration
+                          value: "30"
+                        - name: vip_renewdeadline
+                          value: "20"
+                        - name: vip_retryperiod
+                          value: "4"
+                        image: {{(index (index .TKR_DATA .builtin.controlPlane.version).kubernetesSpec "kube-vip").imageRepository}}/kube-vip:{{(index (index .TKR_DATA .builtin.controlPlane.version).kubernetesSpec "kube-vip").imageTag}}
+                        imagePullPolicy: IfNotPresent
+                        name: kube-vip
+                        resources: {}
+                        securityContext:
+                          capabilities:
+                            add:
+                            - NET_ADMIN
+                            - NET_RAW
+                        volumeMounts:
+                        - mountPath: /etc/kubernetes/admin.conf
+                          name: kubeconfig
+                      hostNetwork: true
+                      hostAliases:
+                      - hostnames:
+                        - kubernetes
+                        ip: 127.0.0.1
+                      volumes:
+                      - hostPath:
+                          path: /etc/kubernetes/admin.conf
+                          type: FileOrCreate
+                        name: kubeconfig
+                    status: {}
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      enabledIf: '{{ not .aviAPIServerHAProvider }}'
+      name: kubeVIPPod
+    - definitions:
+        - jsonPatches:
+            - op: replace
+              path: /spec/template/spec/network
+              valueFrom:
+                template: |
+                  devices:
+                  - networkName: {{ .vcenter.network }}
+                    {{ if .controlPlane.network.nameservers -}}
+                    nameservers:
+                      {{- range .controlPlane.network.nameservers }}
+                    - {{ . }}
+                      {{- end }}
+                    {{- end }}
+                    {{ if .controlPlane.network.searchDomains -}}
+                    searchDomains:
+                      {{- range .controlPlane.network.searchDomains }}
+                    - {{ . }}
+                      {{- end }}
+                    {{- end }}
+                    {{ if list "IPv4" "DualStack" | has .builtin.cluster.network.ipFamily | and (empty .network.addressesFromPools) -}} dhcp4: true {{- end }}
+                    {{ if list "IPv6" "DualStack" | has .builtin.cluster.network.ipFamily | and (empty .network.addressesFromPools) -}} dhcp6: true {{- end }}
+                    {{ if .network.addressesFromPools  -}}
+                    addressesFromPools:
+                      {{- range .network.addressesFromPools }}
+                    - apiGroup: {{ .apiGroup }}
+                      kind: {{ .kind }}
+                      name: {{ .name }}
+                      {{- end }}
+                    {{- end }}
+          selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+            kind: VSphereMachineTemplate
+            matchResources:
+              controlPlane: true
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/network
+              valueFrom:
+                template: |
+                  devices:
+                  - networkName: {{ .vcenter.network }}
+                    {{ if .worker.network.nameservers -}}
+                    nameservers:
+                      {{- range .worker.network.nameservers }}
+                    - {{ . }}
+                      {{- end }}
+                    {{- end }}
+                    {{ if .controlPlane.network.searchDomains -}}
+                    searchDomains:
+                      {{- range .controlPlane.network.searchDomains }}
+                    - {{ . }}
+                      {{- end }}
+                    {{- end }}
+                    {{ if list "IPv4" "DualStack" | has .builtin.cluster.network.ipFamily | and (empty .network.addressesFromPools) -}} dhcp4: true {{- end }}
+                    {{ if list "IPv6" "DualStack" | has .builtin.cluster.network.ipFamily | and (empty .network.addressesFromPools) -}} dhcp6: true {{- end }}
+                    {{ if .network.addressesFromPools  -}}
+                    addressesFromPools:
+                      {{- range .network.addressesFromPools }}
+                    - apiGroup: {{ .apiGroup }}
+                      kind: {{ .kind }}
+                      name: {{ .name }}
+                      {{- end }}
+                    {{- end }}
+          selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+            kind: VSphereMachineTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - tkg-worker
+                  - tkg-worker-windows
+      name: networkConfiguration
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              value: echo "::1         localhost" >> /etc/hosts
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/preKubeadmCommands/-
+              value: echo "::1         localhost" >> /etc/hosts
+          selector:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - tkg-worker
+      enabledIf: '{{ list "IPv6" "DualStack" | has .builtin.cluster.network.ipFamily }}'
+      name: ipv6localhost
+    - definitions:
+        - jsonPatches:
+            - op: replace
+              path: /spec/template/spec/controlPlaneEndpoint/port
+              valueFrom:
+                variable: apiServerPort
+          selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+            kind: VSphereClusterTemplate
+            matchResources:
+              infrastructureCluster: true
+      enabledIf: '{{ not (empty .apiServerPort) }}'
+      name: clusterApiServerPort
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/initConfiguration/localAPIEndpoint
+              valueFrom:
+                template: >
+                  {{ if .builtin.cluster.network.ipFamily | eq "IPv6" | or
+                  (.builtin.cluster.network.ipFamily | eq "DualStack" | and
+                  (.network.ipv6Primary | default false)) -}}
+                    advertiseAddress: '::/0'
+                  {{- else -}}
+                    advertiseAddress: '0.0.0.0'
+                  {{- end }}
+
+                  bindPort: {{ .apiServerPort }}
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/joinConfiguration/controlPlane
+              valueFrom:
+                template: |
+                  localAPIEndpoint:
+                    {{ if .builtin.cluster.network.ipFamily | eq "IPv6" | or (.builtin.cluster.network.ipFamily | eq "DualStack" | and (.network.ipv6Primary | default false)) -}}
+                      advertiseAddress: '::/0'
+                    {{- else -}}
+                      advertiseAddress: '0.0.0.0'
+                    {{- end }}
+                    bindPort: {{ .apiServerPort }}
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      enabledIf: '{{ and (not .aviAPIServerHAProvider) (not (empty .apiServerPort)) }}'
+      name: apiServerEndpointConfiguration
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/initConfiguration/nodeRegistration/kubeletExtraArgs/node-ip
+              value: '::'
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/joinConfiguration/nodeRegistration/kubeletExtraArgs/node-ip
+              value: '::'
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/extraArgs/advertise-address
+              valueFrom:
+                variable: apiServerEndpoint
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/extraArgs/bind-address
+              value: '::'
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/controllerManager/extraArgs/bind-address
+              value: '::'
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/scheduler/extraArgs/bind-address
+              value: '::'
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/joinConfiguration/nodeRegistration/kubeletExtraArgs/node-ip
+              value: '::'
+          selector:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - tkg-worker
+      enabledIf: >-
+        {{ .builtin.cluster.network.ipFamily | eq "DualStack" | and
+        (.network.ipv6Primary | default false) }}
+      name: bindAddressConfiguration
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/files/-
+              value:
+                content: ''
+                owner: root:root
+                path: /etc/sysconfig/kubelet
+                permissions: '0640'
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              value: >-
+                echo "KUBELET_EXTRA_ARGS=--node-ip=$(ip -6 -json addr show dev
+                eth0 scope global | jq -r .[0].addr_info[0].local)" >>
+                /etc/sysconfig/kubelet
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      enabledIf: >-
+        {{ and (.builtin.cluster.network.ipFamily | eq "IPv6" | or
+        (.builtin.cluster.network.ipFamily | eq "DualStack" | and
+        (.network.ipv6Primary | default false))) (not .aviAPIServerHAProvider)
+        }}
+      name: ipv6KubeletNodeIPConfiguration
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/initConfiguration/nodeRegistration/kubeletExtraArgs/node-labels
+              valueFrom:
+                template: >
+                  {{ $first := true }}
+
+                  {{- range $key, $val := (index .TKR_DATA
+                  .builtin.controlPlane.version).labels }}
+
+                  {{- if regexMatch "^(?:[a-zA-z])(?:[-\\w\\.]*[a-zA-z])$" $val
+                  }}
+
+                  {{- if $first }}
+                    {{- $first = false }}
+                  {{- else -}}
+                    ,
+                  {{- end }}
+
+                  {{- $key -}} = {{- $val }}
+
+                  {{- end }}
+
+                  {{- end }}
+
+                  {{- if .controlPlane.nodeLabels -}}
+                    {{- if (index .TKR_DATA .builtin.controlPlane.version).labels -}}
+                    ,
+                    {{- end -}}
+                    {{- $first := true }}
+                    {{- range .controlPlane.nodeLabels }}
+                      {{- if $first }}
+                        {{- $first = false }}
+                      {{- else -}}
+                        ,
+                      {{- end }}
+                      {{- .key -}} = {{- .value -}}
+                    {{ end }}
+                  {{ end }}
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/joinConfiguration/nodeRegistration/kubeletExtraArgs/node-labels
+              valueFrom:
+                template: >
+                  {{ $first := true }}
+
+                  {{- range $key, $val := (index .TKR_DATA
+                  .builtin.controlPlane.version).labels }}
+
+                  {{- if regexMatch "^(?:[a-zA-z])(?:[-\\w\\.]*[a-zA-z])$" $val
+                  }}
+
+                  {{- if $first }}
+                    {{- $first = false }}
+                  {{- else -}}
+                    ,
+                  {{- end }}
+
+                  {{- $key -}} = {{- $val }}
+
+                  {{- end }}
+
+                  {{- end }}
+
+                  {{- if .controlPlane.nodeLabels -}}
+                    {{- if (index .TKR_DATA .builtin.controlPlane.version).labels -}}
+                    ,
+                    {{- end -}}
+                    {{- $first := true }}
+                    {{- range .controlPlane.nodeLabels }}
+                      {{- if $first }}
+                        {{- $first = false }}
+                      {{- else -}}
+                        ,
+                      {{- end }}
+                      {{- .key -}} = {{- .value -}}
+                    {{ end }}
+                  {{ end }}
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/joinConfiguration/nodeRegistration/kubeletExtraArgs/node-labels
+              valueFrom:
+                template: >
+                  {{ $first := true }}
+
+                  {{- range $key, $val := (index .TKR_DATA
+                  .builtin.machineDeployment.version).labels }}
+
+                  {{- if regexMatch "^(?:[a-zA-z])(?:[-\\w\\.]*[a-zA-z])$" $val
+                  }}
+
+                  {{- if $first }}
+                    {{- $first = false }}
+                  {{- else -}}
+                    ,
+                  {{- end }}
+
+                  {{- $key -}} = {{- $val }}
+
+                  {{- end }}
+
+                  {{- end }}
+
+                  {{- if .nodePoolLabels -}}
+                    ,
+                    {{- $first := true }}
+                    {{- range .nodePoolLabels }}
+                      {{- if $first }}
+                        {{- $first = false }}
+                      {{- else -}}
+                        ,
+                      {{- end }}
+                      {{- .key -}} = {{- .value -}}
+                    {{ end }}
+                  {{ end }}
+          selector:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - tkg-worker
+                  - tkg-worker-windows
+      name: nodeLabels
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/files/-
+              valueFrom:
+                template: |
+                  content: |
+                    [Service]
+                    Environment="HTTP_PROXY= {{- .proxy.httpProxy -}} "
+                    Environment="HTTPS_PROXY= {{- .proxy.httpsProxy -}} "
+                    Environment="NO_PROXY= {{- list "localhost" "127.0.0.1" ".svc" ".svc.cluster.local" ((list "IPv6" "DualStack" | has .builtin.cluster.network.ipFamily) | ternary  "::1" nil) | concat .proxy.noProxy .builtin.cluster.network.services .builtin.cluster.network.pods | uniq | sortAlpha | join "," -}} "
+                  owner: root:root
+                  path: /etc/systemd/system/containerd.service.d/http-proxy.conf
+                  permissions: "0640"
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/files/-
+              valueFrom:
+                template: >
+                  content: |
+                    [Service]
+                    Environment="HTTP_PROXY= {{- .proxy.httpProxy -}} "
+                    Environment="HTTPS_PROXY= {{- .proxy.httpsProxy -}} "
+                    Environment="NO_PROXY= {{- list "localhost" "127.0.0.1" ".svc" ".svc.cluster.local" ((list "IPv6" "DualStack" | has .builtin.cluster.network.ipFamily) | ternary  "::1" nil) | concat .proxy.noProxy .builtin.cluster.network.services .builtin.cluster.network.pods | uniq | sortAlpha | join "," -}} "
+                  owner: root:root
+
+                  path:
+                  /usr/lib/systemd/system/kubelet.service.d/http-proxy.conf
+
+                  permissions: "0640"
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              value: systemctl daemon-reload
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              value: systemctl stop containerd
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              value: systemctl start containerd
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              valueFrom:
+                template: |
+                  export HTTP_PROXY= {{- .proxy.httpProxy }}
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              valueFrom:
+                template: |
+                  export HTTPS_PROXY= {{- .proxy.httpsProxy }}
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              valueFrom:
+                template: >
+                  export NO_PROXY= {{- list "localhost" "127.0.0.1" ".svc"
+                  ".svc.cluster.local" ((list "IPv6" "DualStack" | has
+                  .builtin.cluster.network.ipFamily) | ternary  "::1" nil) |
+                  concat .proxy.noProxy .builtin.cluster.network.services
+                  .builtin.cluster.network.pods | uniq | sortAlpha | join "," }}
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/files/-
+              valueFrom:
+                template: |
+                  content: |
+                    [Service]
+                    Environment="HTTP_PROXY= {{- .proxy.httpProxy -}} "
+                    Environment="HTTPS_PROXY= {{- .proxy.httpsProxy -}} "
+                    Environment="NO_PROXY= {{- list "localhost" "127.0.0.1" ".svc" ".svc.cluster.local" ((list "IPv6" "DualStack" | has .builtin.cluster.network.ipFamily) | ternary  "::1" nil) | concat .proxy.noProxy .builtin.cluster.network.services .builtin.cluster.network.pods | uniq | sortAlpha | join "," -}} "
+                  owner: root:root
+                  path: /etc/systemd/system/containerd.service.d/http-proxy.conf
+                  permissions: "0640"
+            - op: add
+              path: /spec/template/spec/files/-
+              valueFrom:
+                template: >
+                  content: |
+                    [Service]
+                    Environment="HTTP_PROXY= {{- .proxy.httpProxy -}} "
+                    Environment="HTTPS_PROXY= {{- .proxy.httpsProxy -}} "
+                    Environment="NO_PROXY= {{- list "localhost" "127.0.0.1" ".svc" ".svc.cluster.local" ((list "IPv6" "DualStack" | has .builtin.cluster.network.ipFamily) | ternary  "::1" nil) | concat .proxy.noProxy .builtin.cluster.network.services .builtin.cluster.network.pods | uniq | sortAlpha | join "," -}} "
+                  owner: root:root
+
+                  path:
+                  /usr/lib/systemd/system/kubelet.service.d/http-proxy.conf
+
+                  permissions: "0640"
+            - op: add
+              path: /spec/template/spec/preKubeadmCommands/-
+              value: systemctl daemon-reload
+            - op: add
+              path: /spec/template/spec/preKubeadmCommands/-
+              value: systemctl restart containerd
+            - op: add
+              path: /spec/template/spec/preKubeadmCommands/-
+              valueFrom:
+                template: |
+                  export HTTP_PROXY= {{- .proxy.httpProxy }}
+            - op: add
+              path: /spec/template/spec/preKubeadmCommands/-
+              valueFrom:
+                template: |
+                  export HTTPS_PROXY= {{- .proxy.httpsProxy }}
+            - op: add
+              path: /spec/template/spec/preKubeadmCommands/-
+              valueFrom:
+                template: >
+                  export NO_PROXY= {{- list "localhost" "127.0.0.1" ".svc"
+                  ".svc.cluster.local" ((list "IPv6" "DualStack" | has
+                  .builtin.cluster.network.ipFamily) | ternary  "::1" nil) |
+                  concat .proxy.noProxy .builtin.cluster.network.services
+                  .builtin.cluster.network.pods | uniq | sortAlpha | join "," }}
+          selector:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - tkg-worker
+      enabledIf: '{{ not (empty .proxy) }}'
+      name: httpProxy
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              value: >-
+                ! which rehash_ca_certificates.sh 2>/dev/null ||
+                rehash_ca_certificates.sh
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              value: >-
+                ! which update-ca-certificates 2>/dev/null || (mv
+                /etc/ssl/certs/tkg-custom-ca.pem
+                /usr/local/share/ca-certificates/tkg-custom-ca.crt &&
+                update-ca-certificates)
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              value: >-
+                ! which update-ca-trust 2>/dev/null || (update-ca-trust
+                force-enable && mv /etc/ssl/certs/tkg-custom-ca.pem
+                /etc/pki/ca-trust/source/anchors/tkg-custom-ca.crt &&
+                update-ca-trust extract)
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              value: systemctl restart containerd
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/files/-
+              valueFrom:
+                template: |
+                  path: /etc/ssl/certs/tkg-custom-ca.pem
+                  {{- $proxy := "" }}
+                  {{- range .trust.additionalTrustedCAs }}
+                    {{- if eq .name "proxy" }}
+                      {{- $proxy = .data }}
+                    {{- end }}
+                  {{- end }}
+                  content: {{ $proxy }}
+                  encoding: base64
+                  permissions: "0444"
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/preKubeadmCommands/-
+              value: >-
+                ! which rehash_ca_certificates.sh 2>/dev/null ||
+                rehash_ca_certificates.sh
+            - op: add
+              path: /spec/template/spec/preKubeadmCommands/-
+              value: >-
+                ! which update-ca-certificates 2>/dev/null || (mv
+                /etc/ssl/certs/tkg-custom-ca.pem
+                /usr/local/share/ca-certificates/tkg-custom-ca.crt &&
+                update-ca-certificates)
+            - op: add
+              path: /spec/template/spec/preKubeadmCommands/-
+              value: >-
+                ! which update-ca-trust 2>/dev/null || (update-ca-trust
+                force-enable && mv /etc/ssl/certs/tkg-custom-ca.pem
+                /etc/pki/ca-trust/source/anchors/tkg-custom-ca.crt &&
+                update-ca-trust extract)
+            - op: add
+              path: /spec/template/spec/preKubeadmCommands/-
+              value: systemctl restart containerd
+            - op: add
+              path: /spec/template/spec/files/-
+              valueFrom:
+                template: |
+                  path: /etc/ssl/certs/tkg-custom-ca.pem
+                  {{- $proxy := "" }}
+                  {{- range .trust.additionalTrustedCAs }}
+                    {{- if eq .name "proxy" }}
+                      {{- $proxy = .data }}
+                    {{- end }}
+                  {{- end }}
+                  content: {{ $proxy }}
+                  encoding: base64
+                  permissions: "0444"
+          selector:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - tkg-worker
+      enabledIf: >-
+        {{ $hasProxyCert := false }} {{- range .trust.additionalTrustedCAs }}
+        {{- if .name | eq "proxy" }} {{- $hasProxyCert = true }} {{- end }} {{-
+        end }} {{- $hasProxyCert }}
+      name: httpProxyCACert
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              valueFrom:
+                template: >
+                  sed -i 's|".*/pause|" {{- or .imageRepository.host (index
+                  .TKR_DATA
+                  .builtin.controlPlane.version).kubernetesSpec.imageRepository
+                  -}} /pause|' /etc/containerd/config.toml
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/preKubeadmCommands/-
+              valueFrom:
+                template: >
+                  sed -i 's|".*/pause|" {{- or .imageRepository.host (index
+                  .TKR_DATA
+                  .builtin.machineDeployment.version).kubernetesSpec.imageRepository
+                  -}} /pause|' /etc/containerd/config.toml
+          selector:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - tkg-worker
+      enabledIf: '{{ not (empty .imageRepository.host) }}'
+      name: customizedImageRepo
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              valueFrom:
+                template: >
+                  {{- $host := index (or .imageRepository.host (index .TKR_DATA
+                  .builtin.controlPlane.version).kubernetesSpec.imageRepository
+                  | splitList "/") 0 -}}
+
+                  echo '[plugins."io.containerd.grpc.v1.cri".registry.configs."
+                  {{- $host -}} ".tls]' >> /etc/containerd/config.toml
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              valueFrom:
+                template: >
+                  {{- $host := index (or .imageRepository.host (index .TKR_DATA
+                  .builtin.controlPlane.version).kubernetesSpec.imageRepository
+                  | splitList "/") 0 }}
+
+                  {{- $val := list "ca_file = \"/etc/containerd/" $host ".crt\""
+                  | join "" }}
+
+                  {{- with .imageRepository }}
+                    {{- if .tlsCertificateValidation | eq false }}
+                      {{- $val = "insecure_skip_verify = true" }}
+                    {{- end }}
+                  {{- end -}}
+
+                  {{- define "echo" -}}
+                    echo '  {{ . -}} ' >> /etc/containerd/config.toml
+                  {{- end }}
+
+                  {{- template "echo" $val -}}
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands/-
+              value: systemctl restart containerd
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/files/-
+              valueFrom:
+                template: >
+                  path: /etc/containerd/ {{- index (or .imageRepository.host
+                  (index .TKR_DATA
+                  .builtin.controlPlane.version).kubernetesSpec.imageRepository
+                  | splitList "/") 0 -}} .crt
+
+                  {{- $proxy := "" }}
+
+                  {{- $image := "" }}
+
+                  {{- range .trust.additionalTrustedCAs }}
+                    {{- if eq .name "proxy" }}
+                      {{- $proxy = .data }}
+                    {{- end }}
+                    {{- if eq .name "imageRepository" }}
+                      {{- $image = .data }}
+                    {{- end }}
+                  {{- end }}
+
+                  content: {{or $proxy $image}}
+
+                  encoding: base64
+
+                  permissions: "0444"
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/preKubeadmCommands/-
+              valueFrom:
+                template: >
+                  {{- $host := index (or .imageRepository.host (index .TKR_DATA
+                  .builtin.machineDeployment.version).kubernetesSpec.imageRepository
+                  | splitList "/") 0 -}}
+
+                  echo '[plugins."io.containerd.grpc.v1.cri".registry.configs."
+                  {{- $host -}} ".tls]' >> /etc/containerd/config.toml
+            - op: add
+              path: /spec/template/spec/preKubeadmCommands/-
+              valueFrom:
+                template: >
+                  {{- $host := index (or .imageRepository.host (index .TKR_DATA
+                  .builtin.machineDeployment.version).kubernetesSpec.imageRepository
+                  | splitList "/") 0 }}
+
+                  {{- $val := list "ca_file = \"/etc/containerd/" $host ".crt\""
+                  | join "" }}
+
+                  {{- with .imageRepository }}
+                    {{- if .tlsCertificateValidation | eq false }}
+                      {{- $val = "insecure_skip_verify = true" }}
+                    {{- end }}
+                  {{- end -}}
+
+                  {{- define "echo" -}}
+                    echo '  {{ . -}} ' >> /etc/containerd/config.toml
+                  {{- end }}
+
+                  {{- template "echo" $val -}}
+            - op: add
+              path: /spec/template/spec/preKubeadmCommands/-
+              value: systemctl restart containerd
+            - op: add
+              path: /spec/template/spec/files/-
+              valueFrom:
+                template: >
+                  path: /etc/containerd/{{ index (or .imageRepository.host
+                  (index .TKR_DATA
+                  .builtin.machineDeployment.version).kubernetesSpec.imageRepository
+                  | splitList "/") 0 }}.crt
+
+                  {{- $proxy := "" }}
+
+                  {{- $image := "" }}
+
+                  {{- range .trust.additionalTrustedCAs }}
+                    {{- if eq .name "proxy" }}
+                      {{- $proxy = .data }}
+                    {{- end }}
+                    {{- if eq .name "imageRepository" }}
+                      {{- $image = .data }}
+                    {{- end }}
+                  {{- end }}
+
+                  content: {{or $proxy $image}}
+
+                  encoding: base64
+
+                  permissions: "0444"
+          selector:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - tkg-worker
+      enabledIf: '{{ not (empty .trust.additionalTrustedCAs) }}'
+      name: registryCACert
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/extraArgs/audit-log-path
+              value: /var/log/kubernetes/audit.log
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/extraArgs/audit-policy-file
+              value: /etc/kubernetes/audit-policy.yaml
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/extraArgs/audit-log-maxage
+              value: '30'
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/extraArgs/audit-log-maxbackup
+              value: '10'
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/extraArgs/audit-log-maxsize
+              value: '100'
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/extraVolumes/-
+              value:
+                hostPath: /etc/kubernetes/audit-policy.yaml
+                mountPath: /etc/kubernetes/audit-policy.yaml
+                name: audit-policy
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/extraVolumes/-
+              value:
+                hostPath: /var/log/kubernetes
+                mountPath: /var/log/kubernetes
+                name: audit-logs
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/files/-
+              value:
+                content: |
+                  ---
+                  apiVersion: audit.k8s.io/v1
+                  kind: Policy
+                  rules:
+                    #! The following requests were manually identified as high-volume and low-risk,
+                    #! so drop them.
+                    - level: None
+                      users: ["system:serviceaccount:kube-system:kube-proxy"]
+                      verbs: ["watch"]
+                      resources:
+                        - group: "" #! core
+                          resources: ["endpoints", "services", "services/status"]
+                    - level: None
+                      userGroups: ["system:nodes"]
+                      verbs: ["get"]
+                      resources:
+                        - group: "" #! core
+                          resources: ["nodes", "nodes/status"]
+                    - level: None
+                      users:
+                        - system:kube-controller-manager
+                        - system:kube-scheduler
+                        - system:serviceaccount:kube-system:endpoint-controller
+                      verbs: ["get", "update"]
+                      namespaces: ["kube-system"]
+                      resources:
+                        - group: "" #! core
+                          resources: ["endpoints"]
+                    - level: None
+                      users: ["system:apiserver"]
+                      verbs: ["get"]
+                      resources:
+                        - group: "" #! core
+                          resources: ["namespaces", "namespaces/status", "namespaces/finalize"]
+                    #! Don't log HPA fetching metrics.
+                    - level: None
+                      users:
+                        - system:kube-controller-manager
+                      verbs: ["get", "list"]
+                      resources:
+                        - group: "metrics.k8s.io"
+                    #! Don't log these read-only URLs.
+                    - level: None
+                      nonResourceURLs:
+                        - /healthz*
+                        - /version
+                        - /swagger*
+                    #! Don't log events requests.
+                    - level: None
+                      resources:
+                        - group: "" #! core
+                          resources: ["events"]
+                    #! Don't log TMC service account performing read operations because they are high-volume.
+                    - level: None
+                      userGroups: ["system:serviceaccounts:vmware-system-tmc"]
+                      verbs: ["get", "list", "watch"]
+                    #! Don't log read requests from garbage collector because they are high-volume.
+                    - level: None
+                      users: ["system:serviceaccount:kube-system:generic-garbage-collector"]
+                      verbs: ["get", "list", "watch"]
+                    #! node and pod status calls from nodes are high-volume and can be large, don't log responses for expected updates from nodes
+                    - level: Request
+                      userGroups: ["system:nodes"]
+                      verbs: ["update","patch"]
+                      resources:
+                        - group: "" #! core
+                          resources: ["nodes/status", "pods/status"]
+                      omitStages:
+                        - "RequestReceived"
+                    #! deletecollection calls can be large, don't log responses for expected namespace deletions
+                    - level: Request
+                      users: ["system:serviceaccount:kube-system:namespace-controller"]
+                      verbs: ["deletecollection"]
+                      omitStages:
+                        - "RequestReceived"
+                    #! Secrets, ConfigMaps, and TokenReviews can contain sensitive & binary data,
+                    #! so only log at the Metadata level.
+                    - level: Metadata
+                      resources:
+                        - group: "" #! core
+                          resources: ["secrets", "configmaps"]
+                        - group: authentication.k8s.io
+                          resources: ["tokenreviews"]
+                      omitStages:
+                        - "RequestReceived"
+                    #! Get repsonses can be large; skip them.
+                    - level: Request
+                      verbs: ["get", "list", "watch"]
+                      resources:
+                        - group: "" #! core
+                        - group: "admissionregistration.k8s.io"
+                        - group: "apiextensions.k8s.io"
+                        - group: "apiregistration.k8s.io"
+                        - group: "apps"
+                        - group: "authentication.k8s.io"
+                        - group: "authorization.k8s.io"
+                        - group: "autoscaling"
+                        - group: "batch"
+                        - group: "certificates.k8s.io"
+                        - group: "extensions"
+                        - group: "metrics.k8s.io"
+                        - group: "networking.k8s.io"
+                        - group: "policy"
+                        - group: "rbac.authorization.k8s.io"
+                        - group: "settings.k8s.io"
+                        - group: "storage.k8s.io"
+                      omitStages:
+                        - "RequestReceived"
+                    #! Default level for known APIs
+                    - level: RequestResponse
+                      resources:
+                        - group: "" #! core
+                        - group: "admissionregistration.k8s.io"
+                        - group: "apiextensions.k8s.io"
+                        - group: "apiregistration.k8s.io"
+                        - group: "apps"
+                        - group: "authentication.k8s.io"
+                        - group: "authorization.k8s.io"
+                        - group: "autoscaling"
+                        - group: "batch"
+                        - group: "certificates.k8s.io"
+                        - group: "extensions"
+                        - group: "metrics.k8s.io"
+                        - group: "networking.k8s.io"
+                        - group: "policy"
+                        - group: "rbac.authorization.k8s.io"
+                        - group: "settings.k8s.io"
+                        - group: "storage.k8s.io"
+                      omitStages:
+                        - "RequestReceived"
+                    #! Default level for all other requests.
+                    - level: Metadata
+                      omitStages:
+                        - "RequestReceived"
+                owner: root:root
+                path: /etc/kubernetes/audit-policy.yaml
+                permissions: '0600'
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      enabledIf: '{{ .auditLogging.enabled }}'
+      name: auditLogging
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/initConfiguration/nodeRegistration/taints
+              value: []
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/joinConfiguration/nodeRegistration/taints
+              value: []
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      enabledIf: '{{ not .controlPlaneTaint }}'
+      name: controlPlaneTaint
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/rolloutBefore
+              valueFrom:
+                template: >
+                  certificatesExpiryDays: {{
+                  .controlPlaneCertificateRotation.daysBefore }}
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      enabledIf: '{{ .controlPlaneCertificateRotation.activate }}'
+      name: kcptCertificateRotation
+    - definitions:
+        - jsonPatches:
+            - op: remove
+              path: /spec/template/spec/useExperimentalRetryJoin
+            - op: add
+              path: /spec/template/spec/joinConfiguration/nodeRegistration/criSocket
+              value: npipe:////./pipe/containerd-containerd
+            - op: remove
+              path: >-
+                /spec/template/spec/joinConfiguration/nodeRegistration/kubeletExtraArgs/tls-cipher-suites
+            - op: add
+              path: >-
+                /spec/template/spec/joinConfiguration/nodeRegistration/kubeletExtraArgs/register-with-taints
+              value: os=windows:NoSchedule
+            - op: replace
+              path: /spec/template/spec/joinConfiguration/nodeRegistration/name
+              value: '{{ ds.meta_data.hostname }}'
+            - op: replace
+              path: /spec/template/spec/preKubeadmCommands
+              valueFrom:
+                template: >
+                  - echo | set /p="::1         ipv6-localhost ipv6-loopback
+                  localhost6 localhost6.localdomain6" > C:\etc\hosts & echo. >>
+                  C:\etc\hosts
+
+                  - echo | set /p="127.0.0.1   {{" {{ ds.meta_data.hostname }}
+                  "}} localhost localhost.localdomain localhost4
+                  localhost4.localdomain4" >> C:\etc\hosts
+            - op: add
+              path: /spec/template/spec/files/-
+              value:
+                content: >
+                  Set-Service -Name "wuauserv" -StartupType Disabled -Status
+                  Stopped
+                path: C:\k\prevent_windows_updates.ps1
+            - op: add
+              path: /spec/template/spec/postKubeadmCommands/-
+              value: >-
+                powershell c:/k/prevent_windows_updates.ps1 -ExecutionPolicy
+                Bypass
+            - op: replace
+              path: /spec/template/spec/users
+              valueFrom:
+                template: |
+                  - name: capv
+                    groups: Administrators
+                    sshAuthorizedKeys:
+                    {{- range .user.sshAuthorizedKeys }}
+                    - ' {{- . -}} '
+                    {{- end }}
+                    sudo: ALL=(ALL) NOPASSWD:ALL
+          selector:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - tkg-worker-windows
+      name: windows
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/files/-
+              value:
+                content: >
+                  function WaitForSaToken($KubeCfgFile, $ServiceAcctName) {
+                      $SaToken = $null
+                      $LoopCount = 400
+                      do {
+                          $LoopCount = $LoopCount - 1
+                          if ($LoopCount -eq 0) {
+                              break
+                          }
+                          sleep 5
+                          $SaToken=$(kubectl --kubeconfig=$KubeCfgFile get secrets -n kube-system -o jsonpath="{.items[?(@.metadata.annotations['kubernetes\.io/service-account\.name']=='$ServiceAcctName')].data.token}")
+                      } while ($SaToken -eq $null)
+                      return $SaToken
+                  }
+
+
+                  # Disable firewall temporarily for SSH and other internal
+                  ports access
+
+                  Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled
+                  False
+
+
+                  $TempFolder = 'C:\programdata\temp'
+
+                  $AntreaInTempFolder =
+                  "$TempFolder\antrea-windows-advanced.zip"
+
+                  $KubeproxyInTempFolder = "$TempFolder\kube-proxy.exe"
+
+
+                  # Create Folders
+
+                  $folders = @('C:\k\antrea', 'C:\var\log\antrea',
+                  'C:\k\antrea\bin', 'C:\var\log\kube-proxy', 'C:\opt\cni\bin',
+                  'C:\etc\cni\net.d')
+
+                  foreach ($f in $folders) {
+                      New-Item -ItemType Directory -Force -Path $f
+                  }
+
+
+                  # Add Windows Defender Options
+
+                  $avexceptions = @('C:\program files\containerd\ctr.exe',
+                  'C:\program files\containerd\containerd.exe')
+
+                  foreach ($e in $avexceptions) {
+                        Add-MpPreference -ExclusionProcess $e
+                  }
+
+
+                  # Extract Antrea, Antrea binary should be packed into windows
+                  OVA already
+
+                  $antreaZipFile = 'C:\k\antrea\antrea-windows-advanced.zip'
+
+                  if (!(Test-Path $antreaZipFile)) {
+                      cp $AntreaInTempFolder $antreaZipFile
+                  }
+
+                  Expand-Archive -Force -Path $antreaZipFile -DestinationPath
+                  C:\k\antrea
+
+                  cp C:\k\antrea\bin\antrea-cni.exe C:\opt\cni\bin\antrea.exe
+                  -Force
+
+                  cp C:\k\antrea\bin\host-local.exe
+                  C:\opt\cni\bin\host-local.exe -Force
+
+                  cp C:\k\antrea\etc\antrea-cni.conflist
+                  C:\etc\cni\net.d\10-antrea.conflist -Force
+
+
+                  # Get HostIP and set in kubeadm-flags.env
+
+                  [Environment]::SetEnvironmentVariable("NODE_NAME",
+                  (hostname).ToLower())
+
+                  $env:HostIP = (
+                      Get-NetIPConfiguration |
+                      Where-Object {
+                          $_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -ne "Disconnected"
+                      }
+                  ).IPv4Address.IPAddress
+
+                  $file = 'C:\var\lib\kubelet\kubeadm-flags.env'
+
+                  $newstr = "--node-ip=" + $env:HostIP
+
+                  $raw = Get-Content -Path $file -TotalCount 1
+
+                  $raw = $raw -replace ".$"
+
+                  $new = "$($raw) $($newstr)`""
+
+                  Set-Content $file $new
+
+
+                  $KubeConfigFile = 'C:\etc\kubernetes\kubelet.conf'
+
+
+                  # Wait for antrea-agent token to be ready, the token will be
+                  used by Install-AntreaAgent
+
+                  $AntreaAgentToken = (WaitForSaToken $KubeConfigFile
+                  'antrea-agent')
+
+
+                  # Setup Kube-Proxy config file
+
+                  $KubeProxyToken = (WaitForSaToken $KubeConfigFile
+                  'kube-proxy-windows')
+
+                  $KubeProxyConfig = 'C:\k\antrea\etc\kube-proxy.conf'
+
+                  $KubeAPIServer = $(kubectl --kubeconfig=$KubeConfigFile config
+                  view -o jsonpath='{.clusters[0].cluster.server}')
+
+                  $KubeProxyToken =
+                  $([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($KubeProxyToken)))
+
+                  kubectl config --kubeconfig=$KubeProxyConfig set-cluster
+                  kubernetes --server=$KubeAPIServer --insecure-skip-tls-verify
+
+                  kubectl config --kubeconfig=$KubeProxyConfig set-credentials
+                  kube-proxy-windows --token=$KubeProxyToken
+
+                  kubectl config --kubeconfig=$KubeProxyConfig set-context
+                  kube-proxy-windows@kubernetes --cluster=kubernetes
+                  --user=kube-proxy-windows
+
+                  kubectl config --kubeconfig=$KubeProxyConfig use-context
+                  kube-proxy-windows@kubernetes
+
+
+                  # kube-proxy.exe should be packed into windows OVA
+
+                  if (!(Test-Path 'C:\k\kube-proxy.exe')) {
+                      cp $KubeproxyInTempFolder 'C:\k\kube-proxy.exe'
+                  }
+
+
+                  # Install antrea-agent & OVS
+
+                  Import-Module C:\k\antrea\helper.psm1
+
+                  & Install-AntreaAgent -KubernetesHome "C:\k" -KubeConfig
+                  "C:\etc\kubernetes\kubelet.conf" -AntreaHome "C:\k\antrea"
+                  -AntreaVersion "1.7.1"
+
+                  New-KubeProxyServiceInterface
+
+                  & C:\k\antrea\Install-OVS.ps1 -ImportCertificate $false
+                  -LocalFile C:\k\antrea\ovs-win64.zip
+
+
+                  # Setup Services
+
+                  $nssm = (Get-Command nssm).Source
+
+                  & $nssm set kubelet start SERVICE_AUTO_START
+
+                  & $nssm install kube-proxy "C:\k\kube-proxy.exe"
+                  "--proxy-mode=userspace --kubeconfig=$KubeProxyConfig
+                  --log-dir=C:\var\log\kube-proxy --logtostderr=false
+                  --alsologtostderr"
+
+                  & $nssm install antrea-agent
+                  "C:\k\antrea\bin\antrea-agent.exe"
+                  "--config=C:\k\antrea\etc\antrea-agent.conf
+                  --logtostderr=false --log_dir=C:\var\log\antrea
+                  --alsologtostderr --log_file_max_size=100
+                  --log_file_max_num=4"
+
+                  & $nssm set antrea-agent DependOnService kube-proxy
+                  ovs-vswitchd
+
+                  & $nssm set antrea-agent Start SERVICE_AUTO_START
+
+
+                  # Start Services
+
+                  start-service kubelet
+
+                  start-service kube-proxy
+
+                  start-service antrea-agent
+                path: C:\Temp\antrea.ps1
+            - op: add
+              path: /spec/template/spec/postKubeadmCommands/-
+              value: powershell C:/Temp/antrea.ps1 -ExecutionPolicy Bypass
+          selector:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - tkg-worker-windows
+      enabledIf: '{{ .cni | eq "antrea" }}'
+      name: windows-antrea
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/ntp
+              valueFrom:
+                template: |
+                  enabled: true
+                  servers:
+                    {{- range .ntpServers }}
+                  - {{ . }}
+                    {{- end }}
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+        - jsonPatches:
+            - op: add
+              path: /spec/template/spec/ntp
+              valueFrom:
+                template: |
+                  enabled: true
+                  servers:
+                    {{- range .ntpServers }}
+                  - {{ . }}
+                    {{- end }}
+          selector:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - tkg-worker
+      enabledIf: '{{ not (empty .ntpServers) }}'
+      name: ntpServers
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/certSANs
+              valueFrom:
+                template: |
+                  {{- range .additionalFQDN }}
+                  - {{ . }}
+                  {{- end }}
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      enabledIf: '{{ not (empty .additionalFQDN) }}'
+      name: additionalFQDN
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/extraArgs/admission-control-config-file
+              value: /etc/kubernetes/admission-control-config.yaml
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/extraVolumes/-
+              valueFrom:
+                template: |
+                  name: admin-control-conf
+                  hostPath: /etc/kubernetes/admission-control-config.yaml
+                  mountPath: /etc/kubernetes/admission-control-config.yaml
+                  readOnly: true
+                  pathType: "File"
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/files/-
+              valueFrom:
+                template: |-
+                  path: /etc/kubernetes/admission-control-config.yaml
+                  content: |-
+                    apiVersion: apiserver.config.k8s.io/v1
+                    kind: AdmissionConfiguration
+                    plugins:
+                    {{- if and (not .podSecurityStandard.deactivated) (semverCompare ">= v1.24" .builtin.controlPlane.version) }}
+                    {{ $namespace_exemptions := printf "%q, %q" "kube-system" "tkg-system" -}}
+                    {{ $defaultWarnAudit := "baseline" }}
+                    {{- if .podSecurityStandard.exemptions.namespaces -}}
+                      {{ range $namespace := .podSecurityStandard.exemptions.namespaces -}}
+                        {{ $namespace_exemptions = printf "%s, %q" $namespace_exemptions $namespace -}}
+                      {{- end -}}
+                    {{- end -}}
+                    - name: PodSecurity
+                      configuration:
+                        apiVersion: pod-security.admission.config.k8s.io/v1beta1
+                        kind: PodSecurityConfiguration
+                        defaults:
+                          enforce: "{{ if .podSecurityStandard.enforce -}}
+                              {{ .podSecurityStandard.enforce }}
+                            {{- end }}"
+                          enforce-version: "{{ .podSecurityStandard.enforceVersion -}}"
+                          audit: "{{ if .podSecurityStandard.audit -}}
+                              {{ .podSecurityStandard.audit }}
+                            {{- else -}}
+                              {{ $defaultWarnAudit }}
+                            {{- end }}"
+                          audit-version: "{{ .podSecurityStandard.auditVersion -}}"
+                          warn: "{{ if .podSecurityStandard.warn -}}
+                              {{ .podSecurityStandard.warn }}
+                            {{- else -}}
+                              {{ $defaultWarnAudit }}
+                            {{- end }}"
+                          warn-version: "{{ .podSecurityStandard.warnVersion -}}"
+                        exemptions:
+                          usernames: []
+                          runtimeClasses: []
+                          namespaces: [{{ $namespace_exemptions }}]
+                    {{- end }}
+                    {{- if .eventRateLimitConf }}
+                    - name: EventRateLimit
+                      path: eventConfig.yaml
+                    {{- end }}
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      description: Adds an admission configuration for kube-apiserver.
+      enabledIf: >-
+        {{ or (and (not .podSecurityStandard.deactivated) (semverCompare ">=
+        v1.24" .builtin.controlPlane.version)) (.eventRateLimitConf) }}
+      name: podSecurityStandard
+    - definitions:
+        - jsonPatches:
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/extraArgs/enable-admission-plugins
+              valueFrom:
+                template: |
+                  {{ $containEnableAdmissionPlugin := false }}
+                  {{- $admissionPlugins := "" }}
+                  {{- range $key, $val := .apiServerExtraArgs }}
+                  {{- if eq $key "enable-admission-plugins" }}
+                    {{- $containEnableAdmissionPlugin = true }}
+                    {{- $admissionPlugins = $val }}
+                  {{- end }}
+                  {{- end }}
+                  {{- if not $containEnableAdmissionPlugin }}
+                  NodeRestriction,EventRateLimit
+                  {{- else -}}
+                  {{- $admissionPlugins -}},EventRateLimit
+                  {{- end }}
+            - op: add
+              path: >-
+                /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/apiServer/extraVolumes/-
+              valueFrom:
+                template: |
+                  name: event-conf
+                  hostPath: /etc/kubernetes/eventConfig.yaml
+                  mountPath: /etc/kubernetes/eventConfig.yaml
+                  readOnly: true
+                  pathType: "File"
+            - op: add
+              path: /spec/template/spec/kubeadmConfigSpec/files/-
+              valueFrom:
+                template: |-
+                  path: /etc/kubernetes/eventConfig.yaml
+                  encoding: base64
+                  content: {{ .eventRateLimitConf}}
+          selector:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlaneTemplate
+            matchResources:
+              controlPlane: true
+      description: Adds an admission configuration for EventRateLimit.
+      enabledIf: '{{ not (empty .eventRateLimitConf) }}'
+      name: eventRateLimitConf
+  variables:
+    - name: vcenter
+      required: true
+      schema:
+        openAPIV3Schema:
+          properties:
+            cloneMode:
+              default: fullClone
+              type: string
+            datacenter:
+              default: ''
+              type: string
+            datastore:
+              default: ''
+              type: string
+            folder:
+              default: ''
+              type: string
+            network:
+              default: VMNetwork
+              type: string
+            resourcePool:
+              default: ''
+              type: string
+            server:
+              default: ''
+              type: string
+            storagePolicyID:
+              default: ''
+              type: string
+            template:
+              default: ''
+              type: string
+            tlsThumbprint:
+              default: ''
+              type: string
+          required:
+            - datacenter
+            - datastore
+            - folder
+            - resourcePool
+            - server
+          type: object
+    - name: VSPHERE_WINDOWS_TEMPLATE
+      required: false
+      schema:
+        openAPIV3Schema:
+          default: ''
+          type: string
+    - name: vipNetworkInterface
+      required: true
+      schema:
+        openAPIV3Schema:
+          default: eth0
+          type: string
+    - name: cni
+      required: true
+      schema:
+        openAPIV3Schema:
+          default: antrea
+          type: string
+    - name: network
+      required: false
+      schema:
+        openAPIV3Schema:
+          default:
+            ipv6Primary: false
+          properties:
+            addressesFromPools:
+              default: []
+              items:
+                properties:
+                  apiGroup:
+                    type: string
+                  kind:
+                    type: string
+                  name:
+                    type: string
+                required:
+                  - apiGroup
+                  - kind
+                  - name
+                type: object
+              type: array
+            ipv6Primary:
+              default: false
+              type: boolean
+          type: object
+    - name: proxy
+      required: false
+      schema:
+        openAPIV3Schema:
+          properties:
+            httpProxy:
+              type: string
+            httpsProxy:
+              type: string
+            noProxy:
+              default: []
+              items:
+                type: string
+              type: array
+          required:
+            - httpProxy
+            - httpsProxy
+          type: object
+    - name: imageRepository
+      required: false
+      schema:
+        openAPIV3Schema:
+          properties:
+            host:
+              type: string
+            tlsCertificateValidation:
+              default: true
+              type: boolean
+          type: object
+    - name: aviAPIServerHAProvider
+      required: false
+      schema:
+        openAPIV3Schema:
+          default: false
+          type: boolean
+    - name: apiServerEndpoint
+      required: false
+      schema:
+        openAPIV3Schema:
+          default: ''
+          type: string
+    - name: apiServerPort
+      required: false
+      schema:
+        openAPIV3Schema:
+          type: integer
+    - name: kubeVipLoadBalancerProvider
+      required: false
+      schema:
+        openAPIV3Schema:
+          default: false
+          type: boolean
+    - name: trust
+      required: false
+      schema:
+        openAPIV3Schema:
+          properties:
+            additionalTrustedCAs:
+              items:
+                properties:
+                  data:
+                    type: string
+                  name:
+                    type: string
+                required:
+                  - name
+                  - data
+                type: object
+              type: array
+          type: object
+    - name: auditLogging
+      required: false
+      schema:
+        openAPIV3Schema:
+          default:
+            enabled: false
+          properties:
+            enabled:
+              default: false
+              type: boolean
+          type: object
+    - name: user
+      required: false
+      schema:
+        openAPIV3Schema:
+          properties:
+            sshAuthorizedKeys:
+              default: []
+              items:
+                type: string
+              type: array
+          type: object
+    - name: controlPlane
+      required: true
+      schema:
+        openAPIV3Schema:
+          properties:
+            machine:
+              properties:
+                diskGiB:
+                  default: 40
+                  type: integer
+                memoryMiB:
+                  default: 8192
+                  type: integer
+                numCPUs:
+                  default: 2
+                  type: integer
+              type: object
+            network:
+              properties:
+                nameservers:
+                  default: []
+                  items:
+                    type: string
+                  type: array
+                searchDomains:
+                  default: []
+                  items:
+                    type: string
+                  type: array
+              type: object
+            nodeLabels:
+              default: []
+              items:
+                properties:
+                  key:
+                    type: string
+                  value:
+                    type: string
+                type: object
+              type: array
+          type: object
+    - name: worker
+      required: false
+      schema:
+        openAPIV3Schema:
+          properties:
+            machine:
+              properties:
+                diskGiB:
+                  default: 40
+                  type: integer
+                memoryMiB:
+                  default: 4096
+                  type: integer
+                numCPUs:
+                  default: 2
+                  type: integer
+              type: object
+            network:
+              properties:
+                nameservers:
+                  default: []
+                  items:
+                    type: string
+                  type: array
+                searchDomains:
+                  default: []
+                  items:
+                    type: string
+                  type: array
+              type: object
+          type: object
+    - name: nodePoolLabels
+      required: false
+      schema:
+        openAPIV3Schema:
+          default: []
+          items:
+            properties:
+              key:
+                type: string
+              value:
+                type: string
+            type: object
+          type: array
+    - name: ntpServers
+      required: false
+      schema:
+        openAPIV3Schema:
+          default: []
+          items:
+            type: string
+          type: array
+    - name: additionalFQDN
+      required: false
+      schema:
+        openAPIV3Schema:
+          default: []
+          items:
+            type: string
+          type: array
+    - name: TKR_DATA
+      required: false
+      schema:
+        openAPIV3Schema:
+          type: object
+    - name: controlPlaneTaint
+      required: false
+      schema:
+        openAPIV3Schema:
+          default: true
+          type: boolean
+    - name: etcdExtraArgs
+      required: false
+      schema:
+        openAPIV3Schema:
+          additionalProperties:
+            type: string
+          default: {}
+          type: object
+    - name: apiServerExtraArgs
+      required: false
+      schema:
+        openAPIV3Schema:
+          additionalProperties:
+            type: string
+          default: {}
+          type: object
+    - name: kubeSchedulerExtraArgs
+      required: false
+      schema:
+        openAPIV3Schema:
+          additionalProperties:
+            type: string
+          default: {}
+          type: object
+    - name: kubeControllerManagerExtraArgs
+      required: false
+      schema:
+        openAPIV3Schema:
+          additionalProperties:
+            type: string
+          default: {}
+          type: object
+    - name: controlPlaneKubeletExtraArgs
+      required: false
+      schema:
+        openAPIV3Schema:
+          additionalProperties:
+            type: string
+          default: {}
+          type: object
+    - name: workerKubeletExtraArgs
+      required: false
+      schema:
+        openAPIV3Schema:
+          additionalProperties:
+            type: string
+          default: {}
+          type: object
+    - name: tlsCipherSuites
+      required: false
+      schema:
+        openAPIV3Schema:
+          default: >-
+            TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+          type: string
+    - name: identityRef
+      required: false
+      schema:
+        openAPIV3Schema:
+          properties:
+            kind:
+              type: string
+            name:
+              type: string
+          required:
+            - name
+            - kind
+          type: object
+    - name: controlPlaneCertificateRotation
+      required: false
+      schema:
+        openAPIV3Schema:
+          default:
+            activate: true
+            daysBefore: 90
+          properties:
+            activate:
+              default: true
+              type: boolean
+            daysBefore:
+              default: 90
+              format: int32
+              minimum: 7
+              type: integer
+          type: object
+    - name: podSecurityStandard
+      required: false
+      schema:
+        openAPIV3Schema:
+          default: {}
+          properties:
+            audit:
+              description: >-
+                audit sets the level for the audit PodSecurityConfiguration
+                mode. One of "", privileged, baseline, restricted.
+              enum:
+                - ''
+                - privileged
+                - baseline
+                - restricted
+              type: string
+            auditVersion:
+              default: v1.24
+              description: >-
+                auditVersion sets the version for the audit
+                PodSecurityConfiguration mode.
+              type: string
+            deactivated:
+              description: >-
+                deactivated disables the patches for Pod Security Standard via
+                AdmissionConfiguration.
+              type: boolean
+            enforce:
+              description: >-
+                enforce sets the level for the enforce PodSecurityConfiguration
+                mode. One of "", privileged, baseline, restricted.
+              enum:
+                - ''
+                - privileged
+                - baseline
+                - restricted
+              type: string
+            enforceVersion:
+              default: v1.24
+              description: >-
+                enforceVersion sets the version for the enforce
+                PodSecurityConfiguration mode.
+              type: string
+            exemptions:
+              description: exemption configuration for the PodSecurityConfiguration.
+              properties:
+                namespaces:
+                  description: >-
+                    namespaces excluded to apply PodSecurityConfiguration
+                    Admission.
+                  items:
+                    type: string
+                  type: array
+              type: object
+            warn:
+              description: >-
+                warn sets the level for the warn PodSecurityConfiguration mode.
+                One of "", privileged, baseline, restricted.
+              enum:
+                - ''
+                - privileged
+                - baseline
+                - restricted
+              type: string
+            warnVersion:
+              default: v1.24
+              description: >-
+                warnVersion sets the version for the warn
+                PodSecurityConfiguration mode.
+              type: string
+          type: object
+    - name: eventRateLimitConf
+      required: false
+      schema:
+        openAPIV3Schema:
+          default: ''
+          type: string
+  workers:
+    machineDeployments:
+      - class: tkg-worker
+        machineHealthCheck:
+          nodeStartupTimeout: 20m0s
+          unhealthyConditions:
+            - status: Unknown
+              timeout: 5m0s
+              type: Ready
+            - status: 'False'
+              timeout: 12m0s
+              type: Ready
+        template:
+          bootstrap:
+            ref:
+              apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+              kind: KubeadmConfigTemplate
+              name: tkg-vsphere-default-v1.0.0-md-config
+              namespace: default
+          infrastructure:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+              kind: VSphereMachineTemplate
+              name: tkg-vsphere-default-v1.0.0-worker
+              namespace: default
+          metadata: {}
+      - class: tkg-worker-windows
+        machineHealthCheck:
+          nodeStartupTimeout: 20m0s
+          unhealthyConditions:
+            - status: Unknown
+              timeout: 5m0s
+              type: Ready
+            - status: 'False'
+              timeout: 12m0s
+              type: Ready
+        template:
+          bootstrap:
+            ref:
+              apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+              kind: KubeadmConfigTemplate
+              name: tkg-vsphere-default-v1.0.0-md-config
+              namespace: default
+          infrastructure:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+              kind: VSphereMachineTemplate
+              name: tkg-vsphere-default-v1.0.0-worker
+              namespace: default
+          metadata: {}

@@ -1,0 +1,350 @@
+{
+  "apiVersion": "cluster.x-k8s.io/v1beta1",
+  "kind": "Cluster",
+  "metadata": {
+    "annotations": {
+      "TKGOperationInfo": "{\"Operation\":\"Create\",\"OperationStartTimestamp\":\"2023-01-31 10:00:14.878365881 +0000 UTC\",\"OperationTimeout\":1800}",
+      "TKGOperationLastObservedTimestamp": "2023-01-31 10:09:02.100674388 +0000 UTC",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"cluster.x-k8s.io/v1beta1\",\"kind\":\"Cluster\",\"metadata\":{\"annotations\":{\"osInfo\":\"photon,3,amd64\",\"tkg/plan\":\"prod\"},\"labels\":{\"tkg.tanzu.vmware.com/cluster-name\":\"tkg-shared\",\"type\":\"shared-services-cluster\"},\"name\":\"tkg-shared\",\"namespace\":\"default\"},\"spec\":{\"clusterNetwork\":{\"pods\":{\"cidrBlocks\":[\"100.96.0.0/11\"]},\"services\":{\"cidrBlocks\":[\"100.64.0.0/13\"]}},\"topology\":{\"class\":\"tkg-vsphere-default-v1.0.0\",\"controlPlane\":{\"metadata\":{\"annotations\":{\"run.tanzu.vmware.com/resolve-os-image\":\"image-type=ova,os-name=photon\"}},\"replicas\":3},\"variables\":[{\"name\":\"controlPlaneCertificateRotation\",\"value\":{\"activate\":true,\"daysBefore\":90}},{\"name\":\"auditLogging\",\"value\":{\"enabled\":false}},{\"name\":\"podSecurityStandard\",\"value\":{\"audit\":\"baseline\",\"deactivated\":false,\"warn\":\"baseline\"}},{\"name\":\"aviAPIServerHAProvider\",\"value\":true},{\"name\":\"vcenter\",\"value\":{\"cloneMode\":\"fullClone\",\"datacenter\":\"/TSV_DC\",\"datastore\":\"/TSV_DC/datastore/vsanDatastore\",\"folder\":\"/TSV_DC/vm/tkg-vsphere-shared-services\",\"network\":\"/TSV_DC/network/TkG-Management\",\"resourcePool\":\"/TSV_DC/host/TSV_Cluster/Resources/tkg-vsphere-shared-services\",\"server\":\"172.16.10.50\",\"storagePolicyID\":\"\",\"template\":\"/TSV_DC/vm/photon-3-kube-v1.24.9+vmware.1\",\"tlsThumbprint\":\"F4:4B:19:D1:2F:FB:D5:3B:73:87:29:FA:DB:2F:26:26:3B:90:DB:31\"}},{\"name\":\"user\",\"value\":{\"sshAuthorizedKeys\":[\"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCc2lIXwyTVRYOWa7j4/vByys/GkyznGajZnfEbhMbdJ6Zgc9Fn6nOQvHTWKAWX4SsctT2wlhKPCcTqYmyQmg54UIyNe1BttJKTnrZSlfAqHtlmVomojAqMkBnkbOOAjEKlyyYKw6H07o0ZAtXfRAd9DHuyqtXViawkfeHLysRniiN3pc+9jP/kUqIcnnYG7v8FI4oD+Q3pp0J4gQ4x1MwI8OPeCCVSXwfxminbfYAovetMRlR3mFnBKY7ItsHHnxNyikNHCUEb0CyhpcSDZPZ8DOoZ/L7FtK4nSosdWzvW0kkJ3JHge+AEsEnVGD5M4dS4ty5mxVc5pZCf/+y9yBYBEtBSP3CCNVfBEcbpFyKE3cvCI1IFuxL0PR4SD3e1igHOyyCOXUih65Gaj3Ea6ir3Ad3dhzMkKlK4te3GpXPZg7pOkVkDAmAQkHkCOrH5dCz2yI1PEGaxXc4gjL0HvhRuDctliHOdXmKjgdED8dvwnpfSYAFqpUPI6WjVYgYAFMYVTSeksIstVOj0IeHQxxbSCX0OoPRM1gROs1IK0CfO4x9n1LYnmrLml+1N94vOnNXac4xzKewyxkiFIF8WQP9SIlXa9iTy0hhd+kNIG5q+YSrSqBmcJDrXBn3dI8COGGrn5TizlXiwXJwGQq510/1A00gC3Tnp/xMf4UHs2l45qQ==\"]}},{\"name\":\"controlPlane\",\"value\":{\"machine\":{\"diskGiB\":40,\"memoryMiB\":8192,\"numCPUs\":2}}},{\"name\":\"worker\",\"value\":{\"count\":1,\"machine\":{\"diskGiB\":40,\"memoryMiB\":8192,\"numCPUs\":2}}}],\"version\":\"v1.24.9+vmware.1\",\"workers\":{\"machineDeployments\":[{\"class\":\"tkg-worker\",\"metadata\":{\"annotations\":{\"run.tanzu.vmware.com/resolve-os-image\":\"image-type=ova,os-name=photon\"}},\"name\":\"md-0\",\"replicas\":1},{\"class\":\"tkg-worker\",\"metadata\":{\"annotations\":{\"run.tanzu.vmware.com/resolve-os-image\":\"image-type=ova,os-name=photon\"}},\"name\":\"md-1\",\"replicas\":1},{\"class\":\"tkg-worker\",\"metadata\":{\"annotations\":{\"run.tanzu.vmware.com/resolve-os-image\":\"image-type=ova,os-name=photon\"}},\"name\":\"md-2\",\"replicas\":1}]}}}}\n",
+      "osInfo": "photon,3,amd64",
+      "tkg.tanzu.vmware.com/skip-tls-verify": "",
+      "tkg.tanzu.vmware.com/tkg-http-proxy": "",
+      "tkg.tanzu.vmware.com/tkg-https-proxy": "",
+      "tkg.tanzu.vmware.com/tkg-ip-family": "",
+      "tkg.tanzu.vmware.com/tkg-no-proxy": "",
+      "tkg.tanzu.vmware.com/tkg-proxy-ca-cert": "",
+      "tkg/plan": "prod"
+    },
+    "creationTimestamp": "2023-01-31T10:00:14Z",
+    "finalizers": [
+      "cluster.cluster.x-k8s.io",
+      "tkg.tanzu.vmware.com/addon",
+      "ako-operator.networking.tkg.tanzu.vmware.com"
+    ],
+    "generation": 3,
+    "labels": {
+      "cluster-role.tkg.tanzu.vmware.com/tanzu-services": "",
+      "cluster.x-k8s.io/cluster-name": "tkg-shared",
+      "networking.tkg.tanzu.vmware.com/avi": "install-ako-for-shared-services-cluster",
+      "run.tanzu.vmware.com/tkr": "v1.24.9---vmware.1-tkg.1-20230114",
+      "tkg.tanzu.vmware.com/cluster-name": "tkg-shared",
+      "topology.cluster.x-k8s.io/owned": "",
+      "type": "shared-services-cluster"
+    },
+    "name": "tkg-shared",
+    "namespace": "default",
+    "resourceVersion": "2650278",
+    "uid": "ea30b994-0512-4380-a0cb-f5673f93eec2"
+  },
+  "spec": {
+    "clusterNetwork": {
+      "pods": {
+        "cidrBlocks": [
+          "100.96.0.0/11"
+        ]
+      },
+      "services": {
+        "cidrBlocks": [
+          "100.64.0.0/13"
+        ]
+      }
+    },
+    "controlPlaneEndpoint": {
+      "host": "172.16.16.5",
+      "port": 6443
+    },
+    "controlPlaneRef": {
+      "apiVersion": "controlplane.cluster.x-k8s.io/v1beta1",
+      "kind": "KubeadmControlPlane",
+      "name": "tkg-shared-5vcq6",
+      "namespace": "default"
+    },
+    "infrastructureRef": {
+      "apiVersion": "infrastructure.cluster.x-k8s.io/v1beta1",
+      "kind": "VSphereCluster",
+      "name": "tkg-shared-zb9wl",
+      "namespace": "default"
+    },
+    "topology": {
+      "class": "tkg-vsphere-default-v1.0.0",
+      "controlPlane": {
+        "metadata": {
+          "annotations": {
+            "run.tanzu.vmware.com/resolve-os-image": "image-type=ova,os-name=photon"
+          }
+        },
+        "replicas": 3
+      },
+      "variables": [
+        {
+          "name": "controlPlaneCertificateRotation",
+          "value": {
+            "activate": true,
+            "daysBefore": 90
+          }
+        },
+        {
+          "name": "auditLogging",
+          "value": {
+            "enabled": false
+          }
+        },
+        {
+          "name": "podSecurityStandard",
+          "value": {
+            "audit": "baseline",
+            "auditVersion": "v1.24",
+            "deactivated": false,
+            "enforceVersion": "v1.24",
+            "warn": "baseline",
+            "warnVersion": "v1.24"
+          }
+        },
+        {
+          "name": "aviAPIServerHAProvider",
+          "value": true
+        },
+        {
+          "name": "vcenter",
+          "value": {
+            "cloneMode": "fullClone",
+            "datacenter": "/TSV_DC",
+            "datastore": "/TSV_DC/datastore/vsanDatastore",
+            "folder": "/TSV_DC/vm/tkg-vsphere-shared-services",
+            "network": "/TSV_DC/network/TkG-Management",
+            "resourcePool": "/TSV_DC/host/TSV_Cluster/Resources/tkg-vsphere-shared-services",
+            "server": "172.16.10.50",
+            "storagePolicyID": "",
+            "template": "/TSV_DC/vm/photon-3-kube-v1.24.9+vmware.1",
+            "tlsThumbprint": "F4:4B:19:D1:2F:FB:D5:3B:73:87:29:FA:DB:2F:26:26:3B:90:DB:31"
+          }
+        },
+        {
+          "name": "user",
+          "value": {
+            "sshAuthorizedKeys": [
+              "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCc2lIXwyTVRYOWa7j4/vByys/GkyznGajZnfEbhMbdJ6Zgc9Fn6nOQvHTWKAWX4SsctT2wlhKPCcTqYmyQmg54UIyNe1BttJKTnrZSlfAqHtlmVomojAqMkBnkbOOAjEKlyyYKw6H07o0ZAtXfRAd9DHuyqtXViawkfeHLysRniiN3pc+9jP/kUqIcnnYG7v8FI4oD+Q3pp0J4gQ4x1MwI8OPeCCVSXwfxminbfYAovetMRlR3mFnBKY7ItsHHnxNyikNHCUEb0CyhpcSDZPZ8DOoZ/L7FtK4nSosdWzvW0kkJ3JHge+AEsEnVGD5M4dS4ty5mxVc5pZCf/+y9yBYBEtBSP3CCNVfBEcbpFyKE3cvCI1IFuxL0PR4SD3e1igHOyyCOXUih65Gaj3Ea6ir3Ad3dhzMkKlK4te3GpXPZg7pOkVkDAmAQkHkCOrH5dCz2yI1PEGaxXc4gjL0HvhRuDctliHOdXmKjgdED8dvwnpfSYAFqpUPI6WjVYgYAFMYVTSeksIstVOj0IeHQxxbSCX0OoPRM1gROs1IK0CfO4x9n1LYnmrLml+1N94vOnNXac4xzKewyxkiFIF8WQP9SIlXa9iTy0hhd+kNIG5q+YSrSqBmcJDrXBn3dI8COGGrn5TizlXiwXJwGQq510/1A00gC3Tnp/xMf4UHs2l45qQ=="
+            ]
+          }
+        },
+        {
+          "name": "controlPlane",
+          "value": {
+            "machine": {
+              "diskGiB": 40,
+              "memoryMiB": 8192,
+              "numCPUs": 2
+            },
+            "nodeLabels": []
+          }
+        },
+        {
+          "name": "worker",
+          "value": {
+            "count": 1,
+            "machine": {
+              "diskGiB": 40,
+              "memoryMiB": 8192,
+              "numCPUs": 2
+            }
+          }
+        },
+        {
+          "name": "VSPHERE_WINDOWS_TEMPLATE",
+          "value": ""
+        },
+        {
+          "name": "vipNetworkInterface",
+          "value": "eth0"
+        },
+        {
+          "name": "cni",
+          "value": "antrea"
+        },
+        {
+          "name": "network",
+          "value": {
+            "addressesFromPools": [],
+            "ipv6Primary": false
+          }
+        },
+        {
+          "name": "apiServerEndpoint",
+          "value": "172.16.16.5"
+        },
+        {
+          "name": "kubeVipLoadBalancerProvider",
+          "value": false
+        },
+        {
+          "name": "nodePoolLabels",
+          "value": []
+        },
+        {
+          "name": "ntpServers",
+          "value": []
+        },
+        {
+          "name": "additionalFQDN",
+          "value": []
+        },
+        {
+          "name": "controlPlaneTaint",
+          "value": true
+        },
+        {
+          "name": "etcdExtraArgs",
+          "value": {}
+        },
+        {
+          "name": "apiServerExtraArgs",
+          "value": {}
+        },
+        {
+          "name": "kubeSchedulerExtraArgs",
+          "value": {}
+        },
+        {
+          "name": "kubeControllerManagerExtraArgs",
+          "value": {}
+        },
+        {
+          "name": "controlPlaneKubeletExtraArgs",
+          "value": {}
+        },
+        {
+          "name": "workerKubeletExtraArgs",
+          "value": {}
+        },
+        {
+          "name": "tlsCipherSuites",
+          "value": "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
+        },
+        {
+          "name": "eventRateLimitConf",
+          "value": ""
+        },
+        {
+          "name": "TKR_DATA",
+          "value": {
+            "v1.24.9+vmware.1": {
+              "kubernetesSpec": {
+                "coredns": {
+                  "imageTag": "v1.8.6_vmware.15"
+                },
+                "etcd": {
+                  "imageTag": "v3.5.6_vmware.3"
+                },
+                "imageRepository": "projects.registry.vmware.com/tkg",
+                "kube-vip": {
+                  "imageRepository": "projects-stg.registry.vmware.com/tkg",
+                  "imageTag": "v0.5.7_vmware.1"
+                },
+                "pause": {
+                  "imageTag": "3.7"
+                },
+                "version": "v1.24.9+vmware.1"
+              },
+              "labels": {
+                "image-type": "ova",
+                "os-arch": "amd64",
+                "os-name": "photon",
+                "os-type": "linux",
+                "os-version": "3",
+                "ova-version": "v1.24.9---vmware.1-tkg.1-f5e94dab9dfbb9988aeb94f1ffdc6e5e",
+                "run.tanzu.vmware.com/os-image": "v1.24.9---vmware.1-tkg.1-f5e94dab9dfbb9988aeb94f1ffdc6e5e",
+                "run.tanzu.vmware.com/tkr": "v1.24.9---vmware.1-tkg.1-20230114"
+              },
+              "osImageRef": {
+                "moid": "vm-1010",
+                "template": "/TSV_DC/vm/photon-3-kube-v1.24.9+vmware.1",
+                "version": "v1.24.9+vmware.1-tkg.1-f5e94dab9dfbb9988aeb94f1ffdc6e5e"
+              }
+            }
+          }
+        }
+      ],
+      "version": "v1.24.9+vmware.1",
+      "workers": {
+        "machineDeployments": [
+          {
+            "class": "tkg-worker",
+            "metadata": {
+              "annotations": {
+                "run.tanzu.vmware.com/resolve-os-image": "image-type=ova,os-name=photon"
+              }
+            },
+            "name": "md-0",
+            "replicas": 1
+          },
+          {
+            "class": "tkg-worker",
+            "metadata": {
+              "annotations": {
+                "run.tanzu.vmware.com/resolve-os-image": "image-type=ova,os-name=photon"
+              }
+            },
+            "name": "md-1",
+            "replicas": 1
+          },
+          {
+            "class": "tkg-worker",
+            "metadata": {
+              "annotations": {
+                "run.tanzu.vmware.com/resolve-os-image": "image-type=ova,os-name=photon"
+              }
+            },
+            "name": "md-2",
+            "replicas": 1
+          }
+        ]
+      }
+    }
+  },
+  "status": {
+    "conditions": [
+      {
+        "lastTransitionTime": "2023-02-06T01:30:42Z",
+        "message": "Scaling down control plane to 3 replicas (actual 4)",
+        "reason": "ScalingDown",
+        "severity": "Warning",
+        "status": "False",
+        "type": "Ready"
+      },
+      {
+        "lastTransitionTime": "2023-01-31T10:02:48Z",
+        "status": "True",
+        "type": "ControlPlaneInitialized"
+      },
+      {
+        "lastTransitionTime": "2023-02-06T01:30:42Z",
+        "message": "Scaling down control plane to 3 replicas (actual 4)",
+        "reason": "ScalingDown",
+        "severity": "Warning",
+        "status": "False",
+        "type": "ControlPlaneReady"
+      },
+      {
+        "lastTransitionTime": "2023-01-31T10:00:23Z",
+        "status": "True",
+        "type": "InfrastructureReady"
+      },
+      {
+        "lastTransitionTime": "2023-02-06T01:43:44Z",
+        "status": "True",
+        "type": "TopologyReconciled"
+      },
+      {
+        "lastTransitionTime": "2023-01-31T10:00:14Z",
+        "reason": "AlreadyUpToDate",
+        "severity": "Info",
+        "status": "False",
+        "type": "UpdatesAvailable"
+      }
+    ],
+    "controlPlaneReady": true,
+    "infrastructureReady": true,
+    "observedGeneration": 3,
+    "phase": "Provisioned"
+  }
+}

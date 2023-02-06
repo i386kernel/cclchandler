@@ -2,12 +2,18 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
+	_ "embed"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/urfave/cli"
 	"io"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
@@ -24,8 +30,12 @@ const (
 	MACHINEDEPLOYMENT     = "/apis/cluster.x-k8s.io/v1beta1/namespaces/default/machinedeployments/"
 )
 
+//go:embed overlay.yaml
+var ob []byte
+
 var kubeapiserver string
 var kubeclient *http.Client
+var kclient *rest.Config
 var certcontent string
 
 func init() {
@@ -72,6 +82,66 @@ func main() {
 		fmt.Println("ERROR: ", err)
 		return
 	}
+	writeFilesForFutureProvisioning()
+	createKappSecret()
+}
+
+func createKappSecret() {
+
+	clientset, err := kubernetes.NewForConfig(kclient)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	certificate := []byte(certcontent)
+	encodedCertificate := base64.StdEncoding.EncodeToString(certificate)
+
+	//var kappSecret struct {
+	//	APIVersion string `json:"apiVersion"`
+	//	Data       struct {
+	//		CaCerts string `json:"caCerts"`
+	//	} `json:"data"`
+	//	Kind     string `json:"kind"`
+	//	Metadata struct {
+	//		CreationTimestamp time.Time `json:"creationTimestamp"`
+	//		Name              string    `json:"name"`
+	//		Namespace         string    `json:"namespace"`
+	//		ResourceVersion   string    `json:"resourceVersion"`
+	//		UID               string    `json:"uid"`
+	//	} `json:"metadata"`
+	//	Type string `json:"type"`
+	//}
+
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "kapp-controller-config",
+			Namespace: "tkg-system",
+		},
+		Data: map[string][]byte{
+			"certificate": []byte(encodedCertificate),
+		},
+		Type: v1.SecretTypeTLS,
+	}
+
+	result, err := clientset.CoreV1().Secrets("tkg-system").Create(context.TODO(), secret, metav1.CreateOptions{})
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Printf("Secret %s/%s created\n", result.Namespace, result.Name)
+}
+
+func writeFilesForFutureProvisioning() {
+	err := os.WriteFile("/root/.config/tanzu/tkg/providers/ytt/03_customizations/overlay.yaml", ob, 0644)
+	if err != nil {
+		fmt.Println("unable to write embedded file to location", err)
+	}
+	err = os.WriteFile("/root/.config/tanzu/tkg/providers/ytt/03_customizations/tkg-custom-ca.pem", []byte(certcontent), 0644)
+	if err != nil {
+		fmt.Println("unable to write tkg-custom-ca.pem to location", err)
+	}
 }
 
 // loadconfig
@@ -85,6 +155,7 @@ func loadconfig() *rest.Config {
 	}
 	kubeapiserver = config.Host
 	fmt.Println("Here's the Current Host Details \n", kubeapiserver)
+	kclient = config
 	return config
 }
 
@@ -105,6 +176,7 @@ func getkubeclient(config *rest.Config) {
 	kubeclient = &http.Client{Transport: transport}
 }
 
+// appendCerts Appends the cert to
 func appendCerts(cert string) {
 	fileContents, err := os.ReadFile(cert)
 	if err != nil {
@@ -113,7 +185,6 @@ func appendCerts(cert string) {
 	}
 	certcontent = string(fileContents)
 	fmt.Println(certcontent)
-
 	for _, kadmcp := range getkubeadmControlPlaneList(kubeclient) {
 		appendKubeAdmCPCert(kubeclient, kadmcp)
 	}
@@ -133,10 +204,10 @@ func deleteCerts(cert string) {
 		return
 	}
 	certcontent = string(fileContents)
-	fmt.Println(certcontent)
-	for _, kadmcp := range getkubeadmControlPlaneList(kubeclient) {
-		deleteKubeAdmCPCerts(kubeclient, kadmcp)
-	}
+	//fmt.Println(certcontent)
+	//for _, kadmcp := range getkubeadmControlPlaneList(kubeclient) {
+	//	deleteKubeAdmCPCerts(kubeclient, kadmcp)
+	//}
 	for _, kadm := range getkubeadmconfigTemplatesList(kubeclient) {
 		deleteKubeAdmConfigCerts(kubeclient, kadm)
 	}
@@ -147,6 +218,7 @@ func deleteCerts(cert string) {
 }
 
 // getkubeadmControlPlaneList returns all kubeadmcontrolplane object names
+// future-implementation if MUTABLE
 func getkubeadmControlPlaneList(client *http.Client) []string {
 	resp, err := client.Get(kubeapiserver + KUBEADMCONTROLPLANE)
 	if err != nil {
@@ -183,10 +255,12 @@ func getkubeadmControlPlaneList(client *http.Client) []string {
 		fmt.Println(kadm.Metadata.Name)
 		kubeadmcplist = append(kubeadmcplist, kadm.Metadata.Name)
 	}
+	fmt.Println(kubeadmcplist)
 	return kubeadmcplist
 }
 
 // appendKubeAdmCPCert appends the provided certificate to kubeadmcontrolplane object
+// future-implementation if MUTABLE
 func appendKubeAdmCPCert(client *http.Client, kadmcp string) {
 	url := KUBEADMCONTROLPLANE + kadmcp
 	req, err := client.Get(kubeapiserver + url)
@@ -225,15 +299,20 @@ func appendKubeAdmCPCert(client *http.Client, kadmcp string) {
 		Permissions: "0644",
 	}
 
+	fmt.Println(newFile)
+
 	KubeadmControlPlane.Spec.KubeadmConfigSpec.Files = append(KubeadmControlPlane.Spec.KubeadmConfigSpec.Files, newFile)
 	KubeadmControlPlane.Spec.KubeadmConfigSpec.PreKubeadmCommands = []string{"'! which rehash_ca_certificates.sh 2>/dev/null || rehash_ca_certificates.sh'", "'! which update-ca-certificates 2>/dev/null || (mv /etc/ssl/certs/tkg-custom-ca.pem /usr/local/share/ca-certificates/tkg-custom-ca.crt && update-ca-certificates)'"}
-	data, err := json.Marshal(KubeadmConfigTemplate)
 
-	request, err := http.NewRequest("PATCH", kubeapiserver+url, bytes.NewBuffer(data))
+	data, err := json.Marshal(KubeadmControlPlane)
 	if err != nil {
 		fmt.Println(err)
 	}
-	request.Header = map[string][]string{"Content-type": {" application/merge-patch+json"}}
+	request, err := http.NewRequest("POST", kubeapiserver+url, bytes.NewBuffer(data))
+	if err != nil {
+		fmt.Println(err)
+	}
+	request.Header = map[string][]string{"Content-type": {" application/json"}}
 	resp, err := client.Do(request)
 	if err != nil {
 		fmt.Println(err)
@@ -247,6 +326,7 @@ func appendKubeAdmCPCert(client *http.Client, kadmcp string) {
 }
 
 // deleteKubeAdmCPCerts deletes all the certificates in kubeadmcontrolplane object
+// future-implementation if MUTABLE
 func deleteKubeAdmCPCerts(client *http.Client, kadmcp string) {
 	url := KUBEADMCONTROLPLANE + kadmcp
 	req, err := client.Get(kubeapiserver + url)
@@ -269,15 +349,14 @@ func deleteKubeAdmCPCerts(client *http.Client, kadmcp string) {
 		os.Exit(1)
 	}
 
-	if err := json.Unmarshal(body, &KubeadmConfigTemplate); err != nil {
+	if err := json.Unmarshal(body, &KubeadmControlPlane); err != nil {
 		fmt.Fprintln(os.Stderr, "Error unmarshaling response:", err)
 		os.Exit(1)
 	}
 
 	KubeadmControlPlane.Spec.KubeadmConfigSpec.Files = KubeadmControlPlane.Spec.KubeadmConfigSpec.Files[:0]
-	KubeadmConfigTemplate.Spec.Template.Spec.Files = KubeadmConfigTemplate.Spec.Template.Spec.Files[:0]
 	KubeadmControlPlane.Spec.KubeadmConfigSpec.PreKubeadmCommands = []string{"'! which rehash_ca_certificates.sh 2>/dev/null || rehash_ca_certificates.sh'", "'! which update-ca-certificates 2>/dev/null || (mv /etc/ssl/certs/tkg-custom-ca.pem /usr/local/share/ca-certificates/tkg-custom-ca.crt && update-ca-certificates)'"}
-	data, err := json.Marshal(KubeadmConfigTemplate)
+	data, err := json.Marshal(KubeadmControlPlane)
 
 	request, err := http.NewRequest("PATCH", kubeapiserver+url, bytes.NewBuffer(data))
 	if err != nil {
@@ -376,17 +455,18 @@ func appendKubeAdmCert(client *http.Client, kadmdep string) {
 	}
 
 	KubeadmConfigTemplate.Spec.Template.Spec.Files = append(KubeadmConfigTemplate.Spec.Template.Spec.Files, newFile)
+
 	KubeadmConfigTemplate.Spec.Template.Spec.PreKubeadmCommands = []string{"'! which rehash_ca_certificates.sh 2>/dev/null || rehash_ca_certificates.sh'", "'! which update-ca-certificates 2>/dev/null || (mv /etc/ssl/certs/tkg-custom-ca.pem /usr/local/share/ca-certificates/tkg-custom-ca.crt && update-ca-certificates)'"}
 	data, err := json.Marshal(KubeadmConfigTemplate)
 
 	request, err := http.NewRequest("PATCH", kubeapiserver+url, bytes.NewBuffer(data))
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
 	request.Header = map[string][]string{"Content-type": {" application/merge-patch+json"}}
 	resp, err := client.Do(request)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
 	defer resp.Body.Close()
 	bodyr, err := io.ReadAll(resp.Body)
@@ -424,18 +504,23 @@ func deleteKubeAdmConfigCerts(client *http.Client, kadmdep string) {
 		os.Exit(1)
 	}
 
-	KubeadmConfigTemplate.Spec.Template.Spec.Files = KubeadmConfigTemplate.Spec.Template.Spec.Files[:0]
+	for i, v := range KubeadmConfigTemplate.Spec.Template.Spec.Files {
+		if v.Content == certcontent {
+			KubeadmConfigTemplate.Spec.Template.Spec.Files = append(KubeadmConfigTemplate.Spec.Template.Spec.Files[:i], KubeadmConfigTemplate.Spec.Template.Spec.Files[i+1:]...)
+		}
+	}
+	//KubeadmConfigTemplate.Spec.Template.Spec.Files = KubeadmConfigTemplate.Spec.Template.Spec.Files[:0]
 	KubeadmConfigTemplate.Spec.Template.Spec.PreKubeadmCommands = []string{"'! which rehash_ca_certificates.sh 2>/dev/null || rehash_ca_certificates.sh'", "'! which update-ca-certificates 2>/dev/null || (mv /etc/ssl/certs/tkg-custom-ca.pem /usr/local/share/ca-certificates/tkg-custom-ca.crt && update-ca-certificates)'"}
 	data, err := json.Marshal(KubeadmConfigTemplate)
 
 	request, err := http.NewRequest("PATCH", kubeapiserver+url, bytes.NewBuffer(data))
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
 	request.Header = map[string][]string{"Content-type": {" application/merge-patch+json"}}
 	resp, err := client.Do(request)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
 	defer resp.Body.Close()
 	bodyr, err := io.ReadAll(resp.Body)
