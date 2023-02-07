@@ -82,36 +82,16 @@ func main() {
 		fmt.Println("ERROR: ", err)
 		return
 	}
-	writeFilesForFutureProvisioning()
-	createKappSecret()
 }
 
 func createKappSecret() {
-
 	clientset, err := kubernetes.NewForConfig(kclient)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
 	certificate := []byte(certcontent)
 	encodedCertificate := base64.StdEncoding.EncodeToString(certificate)
-
-	//var kappSecret struct {
-	//	APIVersion string `json:"apiVersion"`
-	//	Data       struct {
-	//		CaCerts string `json:"caCerts"`
-	//	} `json:"data"`
-	//	Kind     string `json:"kind"`
-	//	Metadata struct {
-	//		CreationTimestamp time.Time `json:"creationTimestamp"`
-	//		Name              string    `json:"name"`
-	//		Namespace         string    `json:"namespace"`
-	//		ResourceVersion   string    `json:"resourceVersion"`
-	//		UID               string    `json:"uid"`
-	//	} `json:"metadata"`
-	//	Type string `json:"type"`
-	//}
 
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -121,7 +101,7 @@ func createKappSecret() {
 		Data: map[string][]byte{
 			"certificate": []byte(encodedCertificate),
 		},
-		Type: v1.SecretTypeTLS,
+		Type: v1.TLSCertKey,
 	}
 
 	result, err := clientset.CoreV1().Secrets("tkg-system").Create(context.TODO(), secret, metav1.CreateOptions{})
@@ -178,6 +158,8 @@ func getkubeclient(config *rest.Config) {
 
 // appendCerts Appends the cert to
 func appendCerts(cert string) {
+	writeFilesForFutureProvisioning()
+	createKappSecret()
 	fileContents, err := os.ReadFile(cert)
 	if err != nil {
 		fmt.Println("Error reading file:", err)
@@ -185,9 +167,6 @@ func appendCerts(cert string) {
 	}
 	certcontent = string(fileContents)
 	fmt.Println(certcontent)
-	for _, kadmcp := range getkubeadmControlPlaneList(kubeclient) {
-		appendKubeAdmCPCert(kubeclient, kadmcp)
-	}
 	for _, kadm := range getkubeadmconfigTemplatesList(kubeclient) {
 		appendKubeAdmCert(kubeclient, kadm)
 	}
@@ -204,10 +183,6 @@ func deleteCerts(cert string) {
 		return
 	}
 	certcontent = string(fileContents)
-	//fmt.Println(certcontent)
-	//for _, kadmcp := range getkubeadmControlPlaneList(kubeclient) {
-	//	deleteKubeAdmCPCerts(kubeclient, kadmcp)
-	//}
 	for _, kadm := range getkubeadmconfigTemplatesList(kubeclient) {
 		deleteKubeAdmConfigCerts(kubeclient, kadm)
 	}

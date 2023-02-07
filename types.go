@@ -239,10 +239,11 @@ var MachineDeployment struct {
 		Annotations struct {
 			MachinedeploymentClustersXK8SIoRevision string `json:"machinedeployment.clusters.x-k8s.io/revision"`
 		} `json:"annotations"`
-		CreationTimestamp time.Time `json:"creationTimestamp"`
-		Finalizers        []string  `json:"finalizers"`
-		Generation        int       `json:"generation"`
-		Labels            struct {
+		CreationTimestamp time.Time `js
+on:"creationTimestamp"`
+		Finalizers []string `json:"finalizers"`
+		Generation int      `json:"generation"`
+		Labels     struct {
 			ClusterXK8SIoClusterName            string `json:"cluster.x-k8s.io/cluster-name"`
 			TopologyClusterXK8SIoDeploymentName string `json:"topology.cluster.x-k8s.io/deployment-name"`
 			TopologyClusterXK8SIoOwned          string `json:"topology.cluster.x-k8s.io/owned"`

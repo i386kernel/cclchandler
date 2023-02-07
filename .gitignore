@@ -7,6 +7,7 @@
 *.customcerthandler
 .cclchandler*
 cclchandler-v1.0.0-beta-linux-amd64.*
+cchandler*
 # Test binary, built with `go test -c`
 *.test
 
