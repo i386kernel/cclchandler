@@ -1,5 +1,5 @@
 # Managing Custom Certificates for TKG Cluster 
-Custom Certificate Lifecycle Handler(cclchandler) program will aid you in efficiently managing the lifecycle of custom certificates within a TKG Cluster by adding and deleting them to both the kubeadmcontrolplane and kubeadmconfigtemplate objects.
+Custom Certificate Lifecycle Manager(cclcmgr) program will aid you in efficiently managing the lifecycle of custom certificates within a TKG Cluster by adding and deleting them to both the kubeadmcontrolplane and kubeadmconfigtemplate objects.
 ## Features
 - Add custom CA certificates to a TKG cluster
 - Delete custom CA certificates from a TKG cluster

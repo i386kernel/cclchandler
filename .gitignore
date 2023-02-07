@@ -5,9 +5,9 @@
 *.so
 *.dylib
 *.customcerthandler
-.cclchandler*
-cclchandler-v1.0.0-beta-linux-amd64.*
-cchandler*
+*.cclchandler
+cclcmgr-v1.0.0-beta-linux-amd64
+cclcmgr*
 # Test binary, built with `go test -c`
 *.test
 
