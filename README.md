@@ -19,7 +19,7 @@ The binary provides the following commands to manage custom certificates for a T
 To add a custom certificate, use the following command:
 
 ```
-./cclcmgr -a append --cert <path/to/certificate>
+./cclcmgr append --cert <path/to/certificate>
 ```
 This will add the specified certificate to the trusted certificate store on the host machine and configure it for use with the TKG cluster.
 
@@ -27,7 +27,7 @@ This will add the specified certificate to the trusted certificate store on the 
 
 To delete a custom certificate, use the following command:
 ```
-./cclcmgr -a delete --cert <path/to/certificate>
+./cclcmgr delete --cert <path/to/certificate>
 ```
 This will remove the specified certificate from the trusted certificate store on the host machine and remove it from the TKG cluster configuration.
 
