@@ -44,28 +44,26 @@ func init() {
 }
 
 func main() {
+
+	if len(os.Args) != 2 {
+		log.Fatal("Invalid execution, execute the program with action -- 'append' or 'delete', Example: cclcmgr append ./tkg-custom-ca.crt")
+	}
 	app := cli.NewApp()
-	app.Name = "customcerthandler"
+	app.Name = "customcertmanager"
 	app.Usage = "TKG Custom Certificate Handler helps to manage the lifecycle of custom certificates in TKG Cluster"
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:     "action, a",
-			Usage:    "Select an action [append or delete] to execute, Either to Append Certs or Delete them",
-			Required: true,
-		},
-		cli.StringFlag{
 			Name:     "cert, c",
-			Usage:    "provide a certificate, cert path. eg. ./tkg-custom-ca.crt",
+			Usage:    "provide a certificate, cert path. Example: ./tkg-custom-ca.crt",
 			Required: true,
 		},
 	}
-
 	app.Action = func(c *cli.Context) error {
-		switch c.String("action") {
-		case "append":
+		switch {
+		case c.Args().Get(1) == "append":
 			appendCerts(c.String("cert"))
-		case "delete":
+		case c.Args().Get(1) == "delete":
 			deleteCerts(c.String("cert"))
 		default:
 			fmt.Println("Invalid option")
