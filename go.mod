@@ -1,4 +1,4 @@
-module kube-interact.lakshya.io
+module cclcmgr
 
 go 1.19
 
@@ -10,7 +10,6 @@ require (
 )
 
 require (
-	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
