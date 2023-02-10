@@ -19,7 +19,8 @@ The binary provides the following commands to manage custom certificates for a T
 To add a custom certificate, use the following command:
 
 ```
-./cclcmgr append --cert <path/to/certificate>
+./cclcmgr --action append --cert <path/to/certificate>
+./cclcmgr --action append --server <Server Host Name>
 ```
 This will add the specified certificate to the trusted certificate store on the host machine and configure it for use with the TKG cluster.
 
