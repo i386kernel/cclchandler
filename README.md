@@ -12,23 +12,36 @@ Before you begin, you will need the following:
 - Make sure you are in Management Cluster Context
 - The binary installed and configured on your machine
 
+##  Download the binary file and set its execute permission to allow it to run
+```
+curl -o cclcmgr https://github.com/i386kernel/cclcmgr/releases/download/v1.0.0-beta/cclcmgr-v1.0.0-beta-linux-amd64
+chmod +x cclcmgr
+```
+
 ## Usage
 The binary provides the following commands to manage custom certificates for a TKG cluster:
 
 ### Adding Custom Certificates
-To add a custom certificate, use the following command:
+To add a custom certificate using existing certificate or pull from the server, use the following command:
 
 ```
+# Append Certs to TKG with certificate
+
 ./cclcmgr --action append --cert <path/to/certificate>
+
+-----
+
+# Pulling the certificates from server
+
 ./cclcmgr --action append --server <Server Host Name>
 ```
 This will add the specified certificate to the trusted certificate store on the host machine and configure it for use with the TKG cluster.
 
-### Deleting Custom Certificates
+### Deleting existing Custom Certificates
 
-To delete a custom certificate, use the following command:
+To delete an existing custom certificate, use the following command:
 ```
-./cclcmgr delete --cert <path/to/certificate>
+./cclcmgr delete --cert <path/to/existing-certificate>
 ```
 This will remove the specified certificate from the trusted certificate store on the host machine and remove it from the TKG cluster configuration.
 

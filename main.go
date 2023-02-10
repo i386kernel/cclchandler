@@ -127,8 +127,13 @@ func getkubeclient(config *rest.Config) {
 }
 
 func getCertsFromHost(host string) {
+
+	config := &tls.Config{
+		InsecureSkipVerify: true,
+	}
+
 	// Dial a TLS connection to the server
-	conn, err := tls.Dial("tcp", host+":443", nil)
+	conn, err := tls.Dial("tcp", host+":443", config)
 	if err != nil {
 		panic(err)
 	}
@@ -148,7 +153,7 @@ func getCertsFromHost(host string) {
 		})
 		certextract = append(certextract, pemCert)
 	}
-	fmt.Println(string(certextract[1]))
+	certcontent = string(certextract[0])
 }
 
 func setCertContentsandKubeClient(cert, server string) {
@@ -244,6 +249,7 @@ func getkubeadmconfigTemplatesList(client *http.Client) []string {
 
 // appendKubeAdmCert updates kubeadm object
 func appendKubeAdmCert(client *http.Client, kadmdep string) {
+	var custfilename = "tkg-custom-ca" + time.Now().Format("Mon, 02-Jan-06 15:04:05 IST") + ".pem"
 	url := KUBEADMCONFIGTEMPLATE + kadmdep
 	req, err := client.Get(kubeapiserver + url)
 	if err != nil {
@@ -277,14 +283,15 @@ func appendKubeAdmCert(client *http.Client, kadmdep string) {
 	}{
 		Content:     certcontent,
 		Owner:       "root",
-		Path:        "/etc/ssl/certs/tkg-custom-ca" + time.Now().Format("2006-01-02") + ".pem",
+		Path:        "/etc/ssl/certs/" + custfilename,
 		Permissions: "0644",
 	}
 
 	KubeadmConfigTemplate.Spec.Template.Spec.Files = append(KubeadmConfigTemplate.Spec.Template.Spec.Files, newFile)
 
-	KubeadmConfigTemplate.Spec.Template.Spec.PreKubeadmCommands = []string{"'! which rehash_ca_certificates.sh 2>/dev/null || rehash_ca_certificates.sh'",
-		"'! which update-ca-certificates 2>/dev/null || (mv /etc/ssl/certs/tkg-custom-ca.pem /usr/local/share/ca-certificates/tkg-custom-ca.crt && update-ca-certificates)'"}
+	cfp := fmt.Sprintf("'! which update-ca-certificates 2>/dev/null || (mv /etc/ssl/certs/%s /usr/local/share/ca-certificates/%s && update-ca-certificates)'", custfilename, custfilename)
+
+	KubeadmConfigTemplate.Spec.Template.Spec.PreKubeadmCommands = []string{"'! which rehash_ca_certificates.sh 2>/dev/null || rehash_ca_certificates.sh'", cfp}
 	data, err := json.Marshal(KubeadmConfigTemplate)
 
 	request, err := http.NewRequest("PATCH", kubeapiserver+url, bytes.NewBuffer(data))
